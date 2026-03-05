@@ -1,65 +1,173 @@
-import Image from "next/image";
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import {
+  MAX_INPUT_WORDS,
+  countWords,
+  selectCompressionTargets,
+} from "@/lib/text";
+
+type CreateFoldResponse = {
+  id: string;
+  path: string;
+  shareUrl: string;
+};
 
 export default function Home() {
+  const router = useRouter();
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const progressFrameRef = useRef<number | null>(null);
+
+  const inputWords = useMemo(() => countWords(input), [input]);
+  const tooLong = inputWords > MAX_INPUT_WORDS;
+  const targetCount = useMemo(
+    () => selectCompressionTargets(Math.max(1, inputWords)).length,
+    [inputWords],
+  );
+
+  function stopProgressLoop() {
+    if (progressFrameRef.current !== null) {
+      cancelAnimationFrame(progressFrameRef.current);
+      progressFrameRef.current = null;
+    }
+  }
+
+  function estimateDurationMs(wordCount: number): number {
+    const targets = selectCompressionTargets(Math.max(1, wordCount));
+    if (targets.length === 0) {
+      return 700;
+    }
+
+    const predictedDurations = targets.map(
+      (target) => 650 + Math.log10(target + 1) * 1100,
+    );
+
+    // Calls run in parallel; wait time is dominated by the slowest scale.
+    const longest = Math.max(...predictedDurations);
+    return Math.max(900, longest);
+  }
+
+  function startProgressLoop(estimatedMs: number) {
+    stopProgressLoop();
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const pct = Math.min(95, (elapsed / estimatedMs) * 95);
+      setProgress(pct);
+      progressFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    progressFrameRef.current = requestAnimationFrame(tick);
+  }
+
+  useEffect(() => stopProgressLoop, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    if (!input.trim()) {
+      setError("Enter text to fold.");
+      return;
+    }
+
+    if (tooLong) {
+      setError(`Input exceeds ${MAX_INPUT_WORDS} words.`);
+      return;
+    }
+
+    setLoading(true);
+    setProgress(0);
+    startProgressLoop(estimateDurationMs(inputWords));
+
+    try {
+      const response = await fetch("/api/folds", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: input }),
+      });
+
+      const body = (await response.json()) as CreateFoldResponse & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(body.error ?? "Failed to create fold.");
+      }
+
+      stopProgressLoop();
+      setProgress(100);
+      setTimeout(() => router.push(body.path), 180);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Failed to create fold.",
+      );
+      stopProgressLoop();
+      setProgress(0);
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10 md:px-10">
+      <header className="mb-6">
+        <h1 className="text-4xl font-semibold tracking-tight">Fold</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Paste up to {MAX_INPUT_WORDS.toLocaleString()} words. Fold will compress
+          the text into fixed scales and create a shareable page.
+        </p>
+      </header>
+
+      <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4">
+        <textarea
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="Paste text here..."
+          className="min-h-[62vh] w-full flex-1 resize-none rounded-3xl border border-slate-300 bg-white/85 px-5 py-4 text-sm leading-7 text-slate-900 outline-none ring-slate-500 transition focus:ring-2"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <button
+            type="submit"
+            disabled={loading || tooLong}
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-500"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {loading ? (
+              <>
+                <span className="fold-loader" aria-hidden />
+                Folding Text...
+              </>
+            ) : (
+              "Fold Text"
+            )}
+          </button>
+          <span className={tooLong ? "text-red-700" : "text-slate-600"}>
+            {inputWords} / {MAX_INPUT_WORDS} words
+          </span>
+          {error ? <span className="text-red-700">{error}</span> : null}
         </div>
-      </main>
-    </div>
+        {loading ? (
+          <div className="w-full">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-slate-900 transition-[width] duration-100 ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Folding {targetCount} scales in parallel...
+            </p>
+          </div>
+        ) : null}
+      </form>
+    </main>
   );
 }
