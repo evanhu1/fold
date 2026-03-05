@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       inputText,
     );
 
-    const fold = saveFold({
+    const fold = await saveFold({
       originalText: normalizedText,
       originalWordCount: inputWordCount,
       levels,

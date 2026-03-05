@@ -1,7 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
-import Database from "better-sqlite3";
+import { Pool } from "pg";
 import type { CompressionLevel, FoldRecord } from "@/lib/types";
 
 type FoldRow = {
@@ -13,59 +11,84 @@ type FoldRow = {
 };
 
 declare global {
-  var __foldDb__: Database.Database | undefined;
+  var __foldDbPool__: Pool | undefined;
+  var __foldDbReady__: Promise<void> | undefined;
 }
 
-function getDb(): Database.Database {
-  if (global.__foldDb__) {
-    return global.__foldDb__;
+function getDatabaseUrl(): string {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is required.");
   }
 
-  const dataDir = join(process.cwd(), "data");
-  mkdirSync(dataDir, { recursive: true });
+  return databaseUrl;
+}
 
-  const dbPath = join(dataDir, "fold.db");
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+function getPool(): Pool {
+  if (global.__foldDbPool__) {
+    return global.__foldDbPool__;
+  }
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS folds (
-      id TEXT PRIMARY KEY,
-      original_text TEXT NOT NULL,
-      original_word_count INTEGER NOT NULL,
-      levels_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    )
-  `);
+  const pool = new Pool({
+    connectionString: getDatabaseUrl(),
+  });
 
-  global.__foldDb__ = db;
-  return db;
+  global.__foldDbPool__ = pool;
+  return pool;
+}
+
+async function ensureSchema(): Promise<void> {
+  if (global.__foldDbReady__) {
+    return global.__foldDbReady__;
+  }
+
+  const pool = getPool();
+
+  global.__foldDbReady__ = pool
+    .query(`
+      CREATE TABLE IF NOT EXISTS folds (
+        id TEXT PRIMARY KEY,
+        original_text TEXT NOT NULL,
+        original_word_count INTEGER NOT NULL,
+        levels_json JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL
+      )
+    `)
+    .then(() => undefined)
+    .catch((error: unknown) => {
+      global.__foldDbReady__ = undefined;
+      throw error;
+    });
+
+  return global.__foldDbReady__;
 }
 
 function createFoldId(): string {
   return randomBytes(7).toString("base64url");
 }
 
-export function saveFold(input: {
+export async function saveFold(input: {
   originalText: string;
   originalWordCount: number;
   levels: CompressionLevel[];
-}): FoldRecord {
-  const db = getDb();
+}): Promise<FoldRecord> {
+  await ensureSchema();
+
+  const pool = getPool();
   const id = createFoldId();
   const createdAt = new Date().toISOString();
 
-  const insert = db.prepare(
+  await pool.query(
     `INSERT INTO folds (id, original_text, original_word_count, levels_json, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-  );
-
-  insert.run(
-    id,
-    input.originalText,
-    input.originalWordCount,
-    JSON.stringify(input.levels),
-    createdAt,
+     VALUES ($1, $2, $3, $4::jsonb, $5::timestamptz)`,
+    [
+      id,
+      input.originalText,
+      input.originalWordCount,
+      JSON.stringify(input.levels),
+      createdAt,
+    ],
   );
 
   return {
@@ -77,15 +100,18 @@ export function saveFold(input: {
   };
 }
 
-export function getFoldById(id: string): FoldRecord | null {
-  const db = getDb();
-  const select = db.prepare(
-    `SELECT id, original_text, original_word_count, levels_json, created_at
+export async function getFoldById(id: string): Promise<FoldRecord | null> {
+  await ensureSchema();
+
+  const pool = getPool();
+  const result = await pool.query<FoldRow>(
+    `SELECT id, original_text, original_word_count, levels_json::text, created_at
      FROM folds
-     WHERE id = ?`,
+     WHERE id = $1`,
+    [id],
   );
 
-  const row = select.get(id) as FoldRow | undefined;
+  const row = result.rows[0];
   if (!row) {
     return null;
   }

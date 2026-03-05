@@ -1,6 +1,6 @@
 # Fold
 
-Fold is a Next.js tool that compresses text into fixed summary levels and stores each result in SQLite so every fold has a shareable URL.
+Fold is a Next.js tool that compresses text into fixed summary levels and stores each result in Postgres so every fold has a shareable URL.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ Fold is a Next.js tool that compresses text into fixed summary levels and stores
    ```bash
    cp .env.example .env.local
    ```
-3. Add your API key in `.env.local`.
+3. Add your database URL and API key in `.env.local`.
 4. Run the app:
    ```bash
    npm run dev
@@ -38,5 +38,5 @@ Fold is a Next.js tool that compresses text into fixed summary levels and stores
 
 ## Persistence
 
-- SQLite file: `data/fold.db`
+- Database URL: `DATABASE_URL`
 - Table: `folds`

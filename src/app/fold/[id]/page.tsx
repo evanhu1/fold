@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function FoldPage({ params }: PageProps) {
   const { id } = await params;
-  const fold = getFoldById(id);
+  const fold = await getFoldById(id);
 
   if (!fold) {
     notFound();
