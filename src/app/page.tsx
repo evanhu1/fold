@@ -1,13 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  MAX_INPUT_WORDS,
-  countWords,
-  selectCompressionTargets,
-} from "@/lib/text";
+import { MAX_INPUT_WORDS, countWords } from "@/lib/text";
 
 type CreateFoldResponse = {
   id: string;
@@ -20,53 +15,9 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const progressFrameRef = useRef<number | null>(null);
 
   const inputWords = useMemo(() => countWords(input), [input]);
   const tooLong = inputWords > MAX_INPUT_WORDS;
-  const targetCount = useMemo(
-    () => selectCompressionTargets(Math.max(1, inputWords)).length,
-    [inputWords],
-  );
-
-  function stopProgressLoop() {
-    if (progressFrameRef.current !== null) {
-      cancelAnimationFrame(progressFrameRef.current);
-      progressFrameRef.current = null;
-    }
-  }
-
-  function estimateDurationMs(wordCount: number): number {
-    const targets = selectCompressionTargets(Math.max(1, wordCount));
-    if (targets.length === 0) {
-      return 700;
-    }
-
-    const predictedDurations = targets.map(
-      (target) => 650 + Math.log10(target + 1) * 1100,
-    );
-
-    // Calls run in parallel; wait time is dominated by the slowest scale.
-    const longest = Math.max(...predictedDurations);
-    return Math.max(900, longest);
-  }
-
-  function startProgressLoop(estimatedMs: number) {
-    stopProgressLoop();
-    const start = performance.now();
-
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const pct = Math.min(95, (elapsed / estimatedMs) * 95);
-      setProgress(pct);
-      progressFrameRef.current = requestAnimationFrame(tick);
-    };
-
-    progressFrameRef.current = requestAnimationFrame(tick);
-  }
-
-  useEffect(() => stopProgressLoop, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,8 +34,6 @@ export default function Home() {
     }
 
     setLoading(true);
-    setProgress(0);
-    startProgressLoop(estimateDurationMs(inputWords));
 
     try {
       const response = await fetch("/api/folds", {
@@ -103,15 +52,11 @@ export default function Home() {
         throw new Error(body.error ?? "Failed to create fold.");
       }
 
-      stopProgressLoop();
-      setProgress(100);
       setTimeout(() => router.push(body.path), 180);
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Failed to create fold.",
       );
-      stopProgressLoop();
-      setProgress(0);
       setLoading(false);
     }
   }
@@ -154,19 +99,6 @@ export default function Home() {
           </span>
           {error ? <span className="text-red-700">{error}</span> : null}
         </div>
-        {loading ? (
-          <div className="w-full">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full rounded-full bg-slate-900 transition-[width] duration-100 ease-linear"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs text-slate-500">
-              Folding {targetCount} scales in parallel...
-            </p>
-          </div>
-        ) : null}
       </form>
     </main>
   );

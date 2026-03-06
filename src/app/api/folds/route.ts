@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       levels,
     });
 
-    const path = `/fold/${fold.id}`;
+    const path = `/${fold.id}`;
     const shareUrl = new URL(path, request.url).toString();
 
     return NextResponse.json(
