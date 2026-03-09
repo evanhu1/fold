@@ -8,9 +8,9 @@ export type CompressionLevel = {
 
 export type FoldRecord = {
   id: string;
+  articleUrl: string | null;
   articleTitle: string | null;
   originalText: string;
-  originalWordCount: number;
   levels: CompressionLevel[];
   createdAt: string;
 };

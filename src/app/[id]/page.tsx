@@ -16,5 +16,5 @@ export default async function FoldPage({ params }: PageProps) {
     notFound();
   }
 
-  return <FoldViewer articleTitle={fold.articleTitle} levels={fold.levels} />;
+  return <FoldViewer articleUrl={fold.articleUrl} articleTitle={fold.articleTitle} levels={fold.levels} />;
 }

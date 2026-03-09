@@ -46,7 +46,7 @@ export class InputValidationError extends Error {
 }
 
 const SHARED_SYSTEM_PROMPT =
-  "You are tasked with compressing text to below a given word count. Return plain text only. Keep core facts and meaning. End cleanly with a complete thought; do not leave a dangling or cut-off phrase. Do not add any title or heading. Return only the compressed body text.";
+  "You are a text compression engine. You will be given source text and a target word count. Your output MUST be close to the target word count — aim for 90-100% of the target. If the target is 2500 words, output around 2250-2500 words. Do not drastically undershoot. Preserve markdown formatting (headings, lists, bold, italics, links, paragraphs). Keep core facts and meaning. End cleanly with a complete thought. Do not add any title or heading. Return only the compressed body text.";
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -96,8 +96,9 @@ function buildAnthropicSystemBlocks(
   ];
 }
 
-function buildAnthropicCompressionPrompt(targetWords: number): string {
-  return `Compress the source text down to ${targetWords} words. If needed, use fewer words to end cleanly.\n\nReturn only the compressed body text. Do not add a title or heading.`;
+function buildUserPrompt(targetWords: number, text?: string): string {
+  const base = `Compress the following text to approximately ${targetWords} words.`;
+  return text ? `${base}\n\nText:\n${text}` : base;
 }
 
 function buildAnthropicWarmupKey(
@@ -186,7 +187,7 @@ async function compressWithOpenAI(
         },
         {
           role: "user",
-          content: `Compress the text down to ${targetWords} words.\\n\\nText:\\n${text}`,
+          content: buildUserPrompt(targetWords, text),
         },
       ],
     }),
@@ -222,7 +223,7 @@ async function compressWithAnthropic(
       apiKey,
       model,
       canonicalSourceText,
-      buildAnthropicCompressionPrompt(targetWords),
+      buildUserPrompt(targetWords),
     );
     const content = extractAnthropicText(data);
 
@@ -266,7 +267,7 @@ async function compressWithGemini(
           role: "user",
           parts: [
             {
-              text: `Compress the text down to ${targetWords} words.\n\nText:\n${text}`,
+              text: buildUserPrompt(targetWords, text),
             },
           ],
         },
@@ -372,7 +373,6 @@ async function compressWithLLM(
 
 export async function buildCompressionLevels(inputText: string): Promise<{
   normalizedText: string;
-  inputWordCount: number;
   levels: CompressionLevel[];
 }> {
   const normalizedText = inputText.trim();
@@ -426,5 +426,5 @@ export async function buildCompressionLevels(inputText: string): Promise<{
     })),
   ];
 
-  return { normalizedText, inputWordCount, levels };
+  return { normalizedText, levels };
 }

@@ -1,5 +1,5 @@
-export const MAX_INPUT_WORDS = 4000;
-const SCALE_TARGETS = [4000, 2000, 1000, 500, 250, 100, 50, 10, 1] as const;
+export const MAX_INPUT_WORDS = 50000;
+const SCALE_TARGETS = [5000, 2500, 1000, 500, 250, 100, 50, 10] as const;
 
 export function selectCompressionTargets(originalWordCount: number): number[] {
   let current = originalWordCount;

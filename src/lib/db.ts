@@ -4,9 +4,9 @@ import type { CompressionLevel, FoldRecord } from "@/lib/types";
 
 type FoldRow = {
   id: string;
+  article_url: string | null;
   article_title: string | null;
   original_text: string;
-  original_word_count: number;
   levels_json: string;
   created_at: string;
 };
@@ -53,6 +53,12 @@ async function ensureSchema(): Promise<void> {
         ADD COLUMN IF NOT EXISTS article_title TEXT
       `),
     )
+    .then(() =>
+      sql.query(`
+        ALTER TABLE folds
+        ADD COLUMN IF NOT EXISTS article_url TEXT
+      `),
+    )
     .then(() => undefined)
     .catch((error: unknown) => {
       global.__foldDbReady__ = undefined;
@@ -67,9 +73,9 @@ function createFoldId(): string {
 }
 
 export async function saveFold(input: {
+  articleUrl: string | null;
   articleTitle: string | null;
   originalText: string;
-  originalWordCount: number;
   levels: CompressionLevel[];
 }): Promise<FoldRecord> {
   await ensureSchema();
@@ -79,13 +85,13 @@ export async function saveFold(input: {
   const createdAt = new Date().toISOString();
 
   await sql.query(
-    `INSERT INTO folds (id, article_title, original_text, original_word_count, levels_json, created_at)
+    `INSERT INTO folds (id, article_url, article_title, original_text, levels_json, created_at)
      VALUES ($1, $2, $3, $4, $5::jsonb, $6::timestamptz)`,
     [
       id,
+      input.articleUrl,
       input.articleTitle,
       input.originalText,
-      input.originalWordCount,
       JSON.stringify(input.levels),
       createdAt,
     ],
@@ -93,9 +99,9 @@ export async function saveFold(input: {
 
   return {
     id,
+    articleUrl: input.articleUrl,
     articleTitle: input.articleTitle,
     originalText: input.originalText,
-    originalWordCount: input.originalWordCount,
     levels: input.levels,
     createdAt,
   };
@@ -106,7 +112,7 @@ export async function getFoldById(id: string): Promise<FoldRecord | null> {
 
   const sql = getSql();
   const result = (await sql.query(
-    `SELECT id, article_title, original_text, original_word_count, levels_json::text, created_at
+    `SELECT id, article_url, article_title, original_text, levels_json::text, created_at
      FROM folds
      WHERE id = $1`,
     [id],
@@ -119,9 +125,9 @@ export async function getFoldById(id: string): Promise<FoldRecord | null> {
 
   return {
     id: row.id,
+    articleUrl: row.article_url,
     articleTitle: row.article_title,
     originalText: row.original_text,
-    originalWordCount: row.original_word_count,
     levels: JSON.parse(row.levels_json) as CompressionLevel[],
     createdAt: row.created_at,
   };

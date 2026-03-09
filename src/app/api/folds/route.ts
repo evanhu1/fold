@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ArticleExtractionError, getArticle } from "@/lib/article";
 import { buildCompressionLevels, InputValidationError } from "@/lib/compress";
 import { saveFold } from "@/lib/db";
 
@@ -7,17 +6,23 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = (await request.json()) as { url?: string };
-    const article = await getArticle(payload.url ?? "");
+    const payload = (await request.json()) as {
+      url?: string;
+      title?: string;
+      markdown?: string;
+    };
 
-    const { normalizedText, inputWordCount, levels } = await buildCompressionLevels(
-      article.textContent,
-    );
+    const markdown = payload.markdown ?? "";
+    const articleUrl = payload.url?.trim() || null;
+    const title = payload.title?.trim() || null;
+
+    const { normalizedText, levels } =
+      await buildCompressionLevels(markdown);
 
     const fold = await saveFold({
-      articleTitle: article.title?.trim() || null,
+      articleUrl,
+      articleTitle: title,
       originalText: normalizedText,
-      originalWordCount: inputWordCount,
       levels,
     });
 
@@ -33,15 +38,11 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    if (error instanceof ArticleExtractionError) {
+    if (error instanceof InputValidationError) {
       return NextResponse.json(
         { error: error.message },
         { status: error.status },
       );
-    }
-
-    if (error instanceof InputValidationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
     const message =

@@ -1,28 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import type { CompressionLevel } from "@/lib/types";
 
 type FoldViewerProps = {
+  articleUrl?: string | null;
   articleTitle?: string | null;
   levels: CompressionLevel[];
 };
 
-export default function FoldViewer({ articleTitle, levels }: FoldViewerProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
+function getInitialIndex(levels: CompressionLevel[]): number {
+  if (typeof window === "undefined") return 0;
+  const param = new URLSearchParams(window.location.search).get("level");
+  if (!param) return 0;
+  const idx = levels.findIndex(
+    (l) => String(l.targetWords) === param,
+  );
+  return idx >= 0 ? idx : 0;
+}
+
+export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldViewerProps) {
+  const [activeIndex, setActiveIndex] = useState(() => getInitialIndex(levels));
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const searchParams = useSearchParams();
+
+  const updateLevel = useCallback(
+    (index: number) => {
+      setActiveIndex(index);
+      const url = new URL(window.location.href);
+      const target = String(levels[index].targetWords);
+      if (target === "full") {
+        url.searchParams.delete("level");
+      } else {
+        url.searchParams.set("level", target);
+      }
+      window.history.replaceState(null, "", url.toString());
+    },
+    [levels],
+  );
+
+  useEffect(() => {
+    const param = searchParams.get("level");
+    if (!param) return;
+    const idx = levels.findIndex((l) => String(l.targetWords) === param);
+    if (idx >= 0 && idx !== activeIndex) {
+      setActiveIndex(idx);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const current = levels[activeIndex];
   const currentSliderLabel = formatSliderLabel(current.targetWords);
 
   async function copyShareLink() {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      const url = new URL(window.location.href);
+      const target = String(current.targetWords);
+      if (target === "full") {
+        url.searchParams.delete("level");
+      } else {
+        url.searchParams.set("level", target);
+      }
+      await navigator.clipboard.writeText(url.toString());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -46,7 +90,7 @@ export default function FoldViewer({ articleTitle, levels }: FoldViewerProps) {
       <header className="flex items-center justify-between gap-4">
         <Link
           href="/"
-          className="text-2xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
+          className="font-serif text-2xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
         >
           Fold
         </Link>
@@ -70,8 +114,35 @@ export default function FoldViewer({ articleTitle, levels }: FoldViewerProps) {
 
       {/* Article title */}
       {articleTitle && (
-        <h2 className="mt-5 text-lg font-semibold leading-snug text-slate-800">
+        <h2 className="mt-5 flex items-center gap-2 text-lg font-semibold leading-snug text-slate-800">
           {articleTitle}
+          {articleUrl && (
+            <a
+              href={articleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 text-slate-400 transition hover:text-slate-600"
+              aria-label="Open original article"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Z"
+                  clipRule="evenodd"
+                />
+                <path
+                  fillRule="evenodd"
+                  d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </a>
+          )}
         </h2>
       )}
 
@@ -104,7 +175,7 @@ export default function FoldViewer({ articleTitle, levels }: FoldViewerProps) {
               max={levels.length - 1}
               step={1}
               value={activeIndex}
-              onChange={(event) => setActiveIndex(Number(event.target.value))}
+              onChange={(event) => updateLevel(Number(event.target.value))}
               aria-label="Compression zoom slider"
             />
             <p className="text-center text-[11px] font-medium leading-tight text-slate-400">
@@ -123,7 +194,7 @@ export default function FoldViewer({ articleTitle, levels }: FoldViewerProps) {
           max={levels.length - 1}
           step={1}
           value={activeIndex}
-          onChange={(event) => setActiveIndex(Number(event.target.value))}
+          onChange={(event) => updateLevel(Number(event.target.value))}
           aria-label="Compression zoom slider"
         />
         <p className="mt-2 text-center text-[11px] font-medium leading-tight text-slate-400">
