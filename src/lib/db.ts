@@ -42,7 +42,6 @@ async function ensureSchema(): Promise<void> {
         id TEXT PRIMARY KEY,
         article_title TEXT,
         original_text TEXT NOT NULL,
-        original_word_count INTEGER NOT NULL,
         levels_json JSONB NOT NULL,
         created_at TIMESTAMPTZ NOT NULL
       )
@@ -57,6 +56,12 @@ async function ensureSchema(): Promise<void> {
       sql.query(`
         ALTER TABLE folds
         ADD COLUMN IF NOT EXISTS article_url TEXT
+      `),
+    )
+    .then(() =>
+      sql.query(`
+        ALTER TABLE folds
+        DROP COLUMN IF EXISTS original_word_count
       `),
     )
     .then(() => undefined)
