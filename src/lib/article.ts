@@ -49,7 +49,7 @@ export async function getArticle(url: string) {
   const reader = new Readability(doc.window.document);
   const article = reader.parse();
 
-  if (!article?.textContent) {
+  if (!article?.content) {
     throw new ArticleExtractionError(
       "Could not extract article text from that page.",
       422,
@@ -68,6 +68,7 @@ export async function getArticle(url: string) {
   return {
     ...article,
     url: parsedUrl.toString(),
+    content: article.content,
     textContent: text,
     wordCount: countWords(text),
   };

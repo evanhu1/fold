@@ -41,84 +41,95 @@ export default function FoldViewer({ articleTitle, levels }: FoldViewerProps) {
   }
 
   return (
-    <main className="relative mx-auto flex h-screen w-full max-w-6xl flex-col overflow-hidden px-6 py-10 md:px-10">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Fold</h1>
-          {articleTitle ? (
-            <p className="mt-2 max-w-3xl text-lg leading-7 text-slate-700">
-              {articleTitle}
-            </p>
-          ) : null}
-        </div>
+    <main className="relative mx-auto flex h-screen w-full max-w-4xl flex-col overflow-hidden px-6 py-8 md:px-10">
+      {/* Header */}
+      <header className="flex items-center justify-between gap-4">
+        <Link
+          href="/"
+          className="text-2xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
+        >
+          Fold
+        </Link>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={copyCurrentText}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition hover:bg-slate-100"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
           >
-            {copiedText ? "Text Copied" : "Copy Text"}
+            {copiedText ? "Copied" : "Copy Text"}
           </button>
           <button
             type="button"
             onClick={copyShareLink}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition hover:bg-slate-100"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
           >
-            {copied ? "Copied" : "Copy Share Link"}
+            {copied ? "Copied" : "Share"}
           </button>
-          <Link
-            href="/"
-            className="rounded-xl bg-slate-900 px-3 py-2 text-sm text-white transition hover:bg-slate-800"
-          >
-            New Fold
-          </Link>
         </div>
       </header>
 
-      <section className="relative mt-8 flex min-h-0 flex-1 flex-col md:pr-24">
-        <div className="mx-auto flex min-h-[24rem] w-full max-w-3xl flex-1 flex-col rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm md:h-full md:min-h-0 md:p-8">
-          <div className="mb-4 flex items-baseline justify-end gap-4">
-            <p className="text-xs text-slate-500">{current.wordCount} words</p>
+      {/* Article title */}
+      {articleTitle && (
+        <h2 className="mt-5 text-lg font-semibold leading-snug text-slate-800">
+          {articleTitle}
+        </h2>
+      )}
+
+      {/* Content area with slider */}
+      <section className="relative mt-6 flex min-h-0 flex-1 gap-6">
+        {/* Article card */}
+        <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
+            <p className="text-xs font-medium text-slate-400">
+              {currentSliderLabel} {current.targetWords !== "full" && "words"}
+            </p>
+            <p className="text-xs tabular-nums text-slate-400">
+              {current.wordCount} words
+            </p>
           </div>
-          <article className="markdown-output min-h-0 flex-1 overflow-y-auto text-[15px] leading-7 text-slate-800">
+          <article className="markdown-output min-h-0 flex-1 overflow-y-auto px-6 py-5 text-[15px] leading-7 text-slate-700">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
               {current.text}
             </ReactMarkdown>
           </article>
         </div>
 
-        <aside className="pointer-events-auto mt-4 rounded-2xl border border-slate-300 bg-white/90 p-3 shadow-sm md:hidden">
-          <input
-            className="mobile-slider"
-            type="range"
-            min={0}
-            max={levels.length - 1}
-            step={1}
-            value={activeIndex}
-            onChange={(event) => setActiveIndex(Number(event.target.value))}
-            aria-label="Compression zoom slider"
-          />
-          <p className="mt-2 text-center text-[11px] leading-tight text-slate-500">
-            {currentSliderLabel}
-          </p>
-        </aside>
-
-        <aside className="pointer-events-auto absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col items-center gap-3 rounded-2xl border border-slate-300 bg-white/90 px-3 py-4 shadow-sm md:flex">
-          <input
-            className="vertical-slider"
-            type="range"
-            min={0}
-            max={levels.length - 1}
-            step={1}
-            value={activeIndex}
-            onChange={(event) => setActiveIndex(Number(event.target.value))}
-            aria-label="Compression zoom slider"
-          />
-          <p className="text-center text-[11px] leading-tight text-slate-500">
-            {currentSliderLabel}
-          </p>
+        {/* Desktop vertical slider */}
+        <aside className="hidden flex-col items-center justify-center md:flex">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-3 py-5 shadow-sm">
+            <input
+              className="vertical-slider"
+              type="range"
+              min={0}
+              max={levels.length - 1}
+              step={1}
+              value={activeIndex}
+              onChange={(event) => setActiveIndex(Number(event.target.value))}
+              aria-label="Compression zoom slider"
+            />
+            <p className="text-center text-[11px] font-medium leading-tight text-slate-400">
+              {currentSliderLabel}
+            </p>
+          </div>
         </aside>
       </section>
+
+      {/* Mobile horizontal slider */}
+      <aside className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm md:hidden">
+        <input
+          className="mobile-slider"
+          type="range"
+          min={0}
+          max={levels.length - 1}
+          step={1}
+          value={activeIndex}
+          onChange={(event) => setActiveIndex(Number(event.target.value))}
+          aria-label="Compression zoom slider"
+        />
+        <p className="mt-2 text-center text-[11px] font-medium leading-tight text-slate-400">
+          {currentSliderLabel}
+        </p>
+      </aside>
     </main>
   );
 }

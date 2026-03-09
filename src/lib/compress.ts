@@ -46,15 +46,11 @@ export class InputValidationError extends Error {
 }
 
 const SHARED_SYSTEM_PROMPT =
-  "You are a compression engine. Return plain text only. Keep core facts and meaning. Keep the response at or below the requested word count. End cleanly with a complete thought; do not leave a dangling or cut-off phrase. Do not add any title or heading. Return only the compressed body text.";
+  "You are tasked with compressing text to below a given word count. Return plain text only. Keep core facts and meaning. End cleanly with a complete thought; do not leave a dangling or cut-off phrase. Do not add any title or heading. Return only the compressed body text.";
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const anthropicWarmups = new Map<string, Promise<void>>();
-
-function maxTokensForTargetWords(targetWords: number): number {
-  return Math.max(256, Math.min(8192, targetWords * 3 + 256));
-}
 
 function extractAnthropicText(data: AnthropicResponse): string {
   return (
@@ -134,7 +130,6 @@ async function requestAnthropicCompression(
   model: string,
   canonicalSourceText: string,
   userPrompt: string,
-  maxTokens: number,
 ): Promise<AnthropicResponse> {
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
@@ -145,7 +140,6 @@ async function requestAnthropicCompression(
     },
     body: JSON.stringify({
       model,
-      max_tokens: maxTokens,
       temperature: 0.2,
       system: buildAnthropicSystemBlocks(canonicalSourceText),
       messages: [
@@ -223,24 +217,17 @@ async function compressWithAnthropic(
     throw new Error("ANTHROPIC_API_KEY is not set");
   }
 
-  let maxTokens = maxTokensForTargetWords(targetWords);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const data = await requestAnthropicCompression(
       apiKey,
       model,
       canonicalSourceText,
       buildAnthropicCompressionPrompt(targetWords),
-      maxTokens,
     );
     const content = extractAnthropicText(data);
 
     if (content) {
       return content;
-    }
-
-    if (data.stop_reason === "max_tokens" && maxTokens < 8192) {
-      maxTokens = Math.min(8192, maxTokens * 2);
-      continue;
     }
 
     break;
@@ -286,7 +273,6 @@ async function compressWithGemini(
       ],
       generationConfig: {
         temperature: 0.2,
-        maxOutputTokens: maxTokensForTargetWords(targetWords),
       },
     }),
   });
@@ -326,7 +312,6 @@ async function warmAnthropicPrefix(canonicalSourceText: string): Promise<void> {
       model,
       canonicalSourceText,
       "Reply with READY.",
-      4,
     );
 
     if (!extractAnthropicText(data)) {
