@@ -8,10 +8,11 @@ import remarkGfm from "remark-gfm";
 import type { CompressionLevel } from "@/lib/types";
 
 type FoldViewerProps = {
+  articleTitle?: string | null;
   levels: CompressionLevel[];
 };
 
-export default function FoldViewer({ levels }: FoldViewerProps) {
+export default function FoldViewer({ articleTitle, levels }: FoldViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
@@ -44,6 +45,11 @@ export default function FoldViewer({ levels }: FoldViewerProps) {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Fold</h1>
+          {articleTitle ? (
+            <p className="mt-2 max-w-3xl text-lg leading-7 text-slate-700">
+              {articleTitle}
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <button

@@ -22,6 +22,17 @@ type AnthropicResponse = {
   stop_reason?: string | null;
 };
 
+type GeminiResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+    finishReason?: string;
+  }>;
+};
+
 type AnthropicTextBlock = {
   type: "text";
   text: string;
@@ -38,6 +49,7 @@ const SHARED_SYSTEM_PROMPT =
   "You are a compression engine. Return plain text only. Keep core facts and meaning. Keep the response at or below the requested word count. End cleanly with a complete thought; do not leave a dangling or cut-off phrase. Do not add any title or heading. Return only the compressed body text.";
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const anthropicWarmups = new Map<string, Promise<void>>();
 
 function maxTokensForTargetWords(targetWords: number): number {
@@ -49,6 +61,15 @@ function extractAnthropicText(data: AnthropicResponse): string {
     data.content
       ?.filter((piece) => piece.type === "text" && piece.text)
       .map((piece) => piece.text)
+      .join("\n")
+      .trim() ?? ""
+  );
+}
+
+function extractGeminiText(data: GeminiResponse): string {
+  return (
+    data.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? "")
       .join("\n")
       .trim() ?? ""
   );
@@ -228,6 +249,62 @@ async function compressWithAnthropic(
   throw new Error("Anthropic returned an empty response");
 }
 
+async function compressWithGemini(
+  text: string,
+  targetWords: number,
+): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL ?? "gemini-3.1-pro-preview";
+
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not set");
+  }
+
+  const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [
+          {
+            text: SHARED_SYSTEM_PROMPT,
+          },
+        ],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Compress the text down to ${targetWords} words.\n\nText:\n${text}`,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: maxTokensForTargetWords(targetWords),
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Gemini request failed (${response.status}): ${body}`);
+  }
+
+  const data = (await response.json()) as GeminiResponse;
+  const content = extractGeminiText(data);
+  if (!content) {
+    throw new Error("Gemini returned an empty response");
+  }
+
+  return content;
+}
+
 async function warmAnthropicPrefix(canonicalSourceText: string): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
@@ -280,6 +357,10 @@ async function compressWithLLM(
     );
   }
 
+  if (provider === "gemini") {
+    return compressWithGemini(text, targetWords);
+  }
+
   if (provider === "openai") {
     return compressWithOpenAI(text, targetWords);
   }
@@ -295,8 +376,12 @@ async function compressWithLLM(
     return compressWithOpenAI(text, targetWords);
   }
 
+  if (process.env.GEMINI_API_KEY) {
+    return compressWithGemini(text, targetWords);
+  }
+
   throw new Error(
-    "No LLM API key configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.",
+    "No LLM API key configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY.",
   );
 }
 

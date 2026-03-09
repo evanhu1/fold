@@ -1,8 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MAX_INPUT_WORDS, countWords } from "@/lib/text";
 
 type CreateFoldResponse = {
   id: string;
@@ -12,24 +11,16 @@ type CreateFoldResponse = {
 
 export default function Home() {
   const router = useRouter();
-  const [input, setInput] = useState("");
+  const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const inputWords = useMemo(() => countWords(input), [input]);
-  const tooLong = inputWords > MAX_INPUT_WORDS;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
-    if (!input.trim()) {
-      setError("Enter text to fold.");
-      return;
-    }
-
-    if (tooLong) {
-      setError(`Input exceeds ${MAX_INPUT_WORDS} words.`);
+    if (!url.trim()) {
+      setError("Enter a website URL.");
       return;
     }
 
@@ -41,7 +32,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: input }),
+        body: JSON.stringify({ url }),
       });
 
       const body = (await response.json()) as CreateFoldResponse & {
@@ -66,37 +57,47 @@ export default function Home() {
       <header className="mb-6">
         <h1 className="text-4xl font-semibold tracking-tight">Fold</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Paste up to {MAX_INPUT_WORDS.toLocaleString()} words. Fold will compress
-          the text into fixed scales and create a shareable page.
+          Zoom in and out of text to see it at different levels of compression.
         </p>
       </header>
 
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4">
-        <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Paste text here..."
-          className="min-h-[62vh] w-full flex-1 resize-none rounded-3xl border border-slate-300 bg-white/85 px-5 py-4 text-sm leading-7 text-slate-900 outline-none ring-slate-500 transition focus:ring-2"
-        />
+        <div className="flex flex-col">
+          <label
+            htmlFor="article-url"
+            className="mb-3 text-sm font-medium text-slate-700"
+          >
+            Enter a URL
+          </label>
+          <input
+            id="article-url"
+            type="url"
+            inputMode="url"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="https://example.com/article"
+            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-slate-500 transition focus:ring-2"
+          />
+        </div>
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <button
             type="submit"
-            disabled={loading || tooLong}
+            disabled={loading}
             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-500"
           >
             {loading ? (
               <>
                 <span className="fold-loader" aria-hidden />
-                Folding Text...
+                Extracting Text...
               </>
             ) : (
-              "Fold Text"
+              "Fold Article"
             )}
           </button>
-          <span className={tooLong ? "text-red-700" : "text-slate-600"}>
-            {inputWords} / {MAX_INPUT_WORDS} words
-          </span>
           {error ? <span className="text-red-700">{error}</span> : null}
         </div>
       </form>
