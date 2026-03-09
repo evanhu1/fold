@@ -1,5 +1,5 @@
 import { Readability } from "@mozilla/readability";
-import { JSDOM } from "jsdom";
+import { parseHTML } from "linkedom";
 import TurndownService from "turndown";
 import { countWords } from "@/lib/text";
 
@@ -73,9 +73,11 @@ function isPromotionalInterstitial(element: Element): boolean {
 }
 
 function sanitizeArticleContent(html: string): string {
-  const doc = new JSDOM(html).window.document;
+  const { document } = parseHTML(
+    `<!doctype html><html><body>${html}</body></html>`,
+  );
 
-  Array.from(doc.body.querySelectorAll("div, section, aside, p")).forEach(
+  Array.from(document.querySelectorAll("div, section, aside, p")).forEach(
     (element) => {
       if (isPromotionalInterstitial(element)) {
         element.remove();
@@ -83,7 +85,7 @@ function sanitizeArticleContent(html: string): string {
     },
   );
 
-  return doc.body.innerHTML;
+  return document.body.innerHTML;
 }
 
 export class ArticleExtractionError extends Error {
@@ -129,10 +131,17 @@ export async function getArticle(url: string) {
   }
 
   const html = await response.text();
-  const doc = new JSDOM(html, {
-    url: parsedUrl.toString(),
-  });
-  const reader = new Readability(doc.window.document);
+  const { document } = parseHTML(html);
+
+  // Set base URL so Readability can resolve relative links
+  let base = document.querySelector("base");
+  if (!base) {
+    base = document.createElement("base");
+    document.head.appendChild(base);
+  }
+  base.setAttribute("href", parsedUrl.toString());
+
+  const reader = new Readability(document);
   const article = reader.parse();
 
   if (!article?.content) {

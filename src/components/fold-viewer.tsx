@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -14,25 +14,18 @@ type FoldViewerProps = {
   levels: CompressionLevel[];
 };
 
-function getInitialIndex(levels: CompressionLevel[]): number {
-  if (typeof window === "undefined") return 0;
-  const param = new URLSearchParams(window.location.search).get("level");
-  if (!param) return 0;
-  const idx = levels.findIndex(
-    (l) => String(l.targetWords) === param,
-  );
-  return idx >= 0 ? idx : 0;
-}
-
 export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldViewerProps) {
-  const [activeIndex, setActiveIndex] = useState(() => getInitialIndex(levels));
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const searchParams = useSearchParams();
+  const param = searchParams.get("level");
+  const activeIndex = param
+    ? levels.findIndex((level) => String(level.targetWords) === param)
+    : 0;
+  const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0;
 
   const updateLevel = useCallback(
     (index: number) => {
-      setActiveIndex(index);
       const url = new URL(window.location.href);
       const target = String(levels[index].targetWords);
       if (target === "full") {
@@ -45,16 +38,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
     [levels],
   );
 
-  useEffect(() => {
-    const param = searchParams.get("level");
-    if (!param) return;
-    const idx = levels.findIndex((l) => String(l.targetWords) === param);
-    if (idx >= 0 && idx !== activeIndex) {
-      setActiveIndex(idx);
-    }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const current = levels[activeIndex];
+  const current = levels[safeActiveIndex];
   const currentSliderLabel = formatSliderLabel(current.targetWords);
 
   async function copyShareLink() {
@@ -174,7 +158,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
               min={0}
               max={levels.length - 1}
               step={1}
-              value={activeIndex}
+              value={safeActiveIndex}
               onChange={(event) => updateLevel(Number(event.target.value))}
               aria-label="Compression zoom slider"
             />
@@ -193,7 +177,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
           min={0}
           max={levels.length - 1}
           step={1}
-          value={activeIndex}
+          value={safeActiveIndex}
           onChange={(event) => updateLevel(Number(event.target.value))}
           aria-label="Compression zoom slider"
         />
