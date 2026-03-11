@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -18,7 +18,6 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [demoIndex, setDemoIndex] = useState<number | null>(null);
-  const demoRan = useRef(false);
   const searchParams = useSearchParams();
   const param = searchParams.get("level");
   const activeIndex = param
@@ -29,12 +28,8 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
 
   // First-visit demo: animate slider to 10-word level and back
   useEffect(() => {
-    if (demoRan.current) return;
-    demoRan.current = true;
-
     const STORAGE_KEY = "fold-demo-seen";
-    if (typeof window === "undefined") return;
-    if (localStorage.getItem(STORAGE_KEY)) return;
+    // if (localStorage.getItem(STORAGE_KEY)) return;
 
     // Find the 10-word level index
     const targetIdx = levels.findIndex((l) => l.targetWords === 10);
@@ -42,11 +37,13 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
 
     localStorage.setItem(STORAGE_KEY, "1");
 
-    // Animate: step through each level to targetIdx, pause, then back to 0
+    // Show overlay immediately, animate after delay
+    setDemoIndex(0);
+
     const STEP_MS = 180;
     const PAUSE_MS = 800;
     const timers: ReturnType<typeof setTimeout>[] = [];
-    let t = 600; // initial delay
+    let t = 1000; // delay before slider starts moving
 
     // Animate forward: 0 → targetIdx
     for (let i = 1; i <= targetIdx; i++) {
@@ -114,16 +111,28 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
     }
   }
 
+  const isDemoing = demoIndex !== null;
+
   return (
     <main className="relative mx-auto flex h-screen w-full max-w-4xl flex-col overflow-hidden px-6 py-8 md:px-10">
+      {/* Demo overlay */}
+      {isDemoing && (
+        <div className="fixed inset-0 z-40 bg-black/40 transition-opacity" />
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
-        <Link
-          href="/"
-          className="font-serif text-2xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
-        >
-          Fold
-        </Link>
+        <div className="min-w-0 flex flex-col md:flex-row md:items-baseline md:gap-3">
+          <Link
+            href="/"
+            className="shrink-0 font-serif text-4xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
+          >
+            Fold
+          </Link>
+          <span className="hidden truncate text-sm text-slate-400 sm:block">
+            read text at different levels of detail
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -142,49 +151,43 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
         </div>
       </header>
 
-      {/* Article title */}
-      {articleTitle && (
-        <h2 className="mt-5 flex items-center gap-2 text-lg font-semibold leading-snug text-slate-800">
-          {articleTitle}
-          {articleUrl && (
-            <a
-              href={articleUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 text-slate-400 transition hover:text-slate-600"
-              aria-label="Open original article"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="h-4 w-4"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Z"
-                  clipRule="evenodd"
-                />
-                <path
-                  fillRule="evenodd"
-                  d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </a>
-          )}
-        </h2>
-      )}
 
       {/* Content area with slider */}
       <section className="relative mt-6 flex min-h-0 flex-1 gap-6">
         {/* Article card */}
-        <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
-            <p className="text-xs font-medium text-slate-400">
-              {currentSliderLabel} {current.targetWords !== "full" && "words"}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+          <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 px-6 py-3">
+            {articleUrl && (
+              <a
+                href={articleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-slate-300 transition hover:text-slate-500"
+                aria-label="Open original article"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Z"
+                    clipRule="evenodd"
+                  />
+                  <path
+                    fillRule="evenodd"
+                    d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </a>
+            )}
+            <p className="min-w-0 flex-1 truncate text-xs font-medium text-slate-500">
+              {articleTitle || `${currentSliderLabel}${current.targetWords !== "full" ? " words" : ""}`}
             </p>
-            <p className="text-xs tabular-nums text-slate-400">
+            <p className="shrink-0 text-xs tabular-nums text-slate-400">
               {current.wordCount} words
             </p>
           </div>
@@ -196,8 +199,8 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
         </div>
 
         {/* Desktop vertical slider */}
-        <aside className="hidden flex-col items-center justify-center md:flex">
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-3 py-5 shadow-sm">
+        <aside className={`hidden flex-col items-center justify-center md:flex ${isDemoing ? "relative z-50" : ""}`}>
+          <div className={`flex flex-col items-center gap-3 rounded-2xl border border-slate-200 px-3 py-5 shadow-sm ${isDemoing ? "bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
             <input
               className="vertical-slider"
               type="range"
@@ -212,11 +215,14 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
               {currentSliderLabel}
             </p>
           </div>
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+            Zoom
+          </p>
         </aside>
       </section>
 
       {/* Mobile horizontal slider */}
-      <aside className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm md:hidden">
+      <aside className={`mt-4 rounded-2xl border border-slate-200 p-3 shadow-sm md:hidden ${isDemoing ? "relative z-50 bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
         <input
           className="mobile-slider"
           type="range"
@@ -228,7 +234,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
           aria-label="Compression zoom slider"
         />
         <p className="mt-2 text-center text-[11px] font-medium leading-tight text-slate-400">
-          {currentSliderLabel}
+          Zoom Scale: {currentSliderLabel}
         </p>
       </aside>
     </main>
