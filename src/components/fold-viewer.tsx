@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -17,15 +17,61 @@ type FoldViewerProps = {
 export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldViewerProps) {
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [demoIndex, setDemoIndex] = useState<number | null>(null);
+  const demoRan = useRef(false);
   const searchParams = useSearchParams();
   const param = searchParams.get("level");
   const activeIndex = param
     ? levels.findIndex((level) => String(level.targetWords) === param)
     : 0;
-  const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0;
+  const baseIndex = activeIndex >= 0 ? activeIndex : 0;
+  const safeActiveIndex = demoIndex !== null ? demoIndex : baseIndex;
+
+  // First-visit demo: animate slider to 10-word level and back
+  useEffect(() => {
+    if (demoRan.current) return;
+    demoRan.current = true;
+
+    const STORAGE_KEY = "fold-demo-seen";
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem(STORAGE_KEY)) return;
+
+    // Find the 10-word level index
+    const targetIdx = levels.findIndex((l) => l.targetWords === 10);
+    if (targetIdx <= 0) return;
+
+    localStorage.setItem(STORAGE_KEY, "1");
+
+    // Animate: step through each level to targetIdx, pause, then back to 0
+    const STEP_MS = 180;
+    const PAUSE_MS = 800;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let t = 600; // initial delay
+
+    // Animate forward: 0 → targetIdx
+    for (let i = 1; i <= targetIdx; i++) {
+      timers.push(setTimeout(() => setDemoIndex(i), t));
+      t += STEP_MS;
+    }
+
+    // Pause at targetIdx
+    t += PAUSE_MS;
+
+    // Animate back: targetIdx → 0
+    for (let i = targetIdx - 1; i >= 0; i--) {
+      timers.push(setTimeout(() => setDemoIndex(i), t));
+      t += STEP_MS;
+    }
+
+    // Clear demo state
+    timers.push(setTimeout(() => setDemoIndex(null), t + 100));
+
+    return () => timers.forEach(clearTimeout);
+  }, [levels]);
 
   const updateLevel = useCallback(
     (index: number) => {
+      setDemoIndex(null); // cancel demo on user interaction
       const url = new URL(window.location.href);
       const target = String(levels[index].targetWords);
       if (target === "full") {

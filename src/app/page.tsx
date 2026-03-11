@@ -100,9 +100,8 @@ export default function Home() {
           <h1 className="font-serif text-5xl font-bold tracking-tight text-slate-900">
             Fold
           </h1>
-          <p className="mx-auto mt-3 max-w-xs text-base text-slate-500">
-            Zoom in and out of any article to read it at different levels of
-            detail.
+          <p className="mt-2 text-sm text-slate-400">
+            read text at different levels of detail
           </p>
 
           <form onSubmit={handleExtract} className="mt-10">
@@ -127,13 +126,21 @@ export default function Home() {
                 {extracting ? (
                   <span className="fold-loader" aria-hidden />
                 ) : (
-                  "Extract"
+                  "Next"
                 )}
               </button>
             </div>
 
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
           </form>
+
+          <button
+            type="button"
+            onClick={() => setStep("preview")}
+            className="mt-5 text-sm text-slate-400 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-600 hover:decoration-slate-400"
+          >
+            Use custom text
+          </button>
         </div>
       </main>
     );
@@ -165,6 +172,7 @@ export default function Home() {
         value={markdown}
         onChange={(event) => setMarkdown(event.target.value)}
         disabled={step === "folding"}
+        placeholder="Paste or type your text here..."
         className="mt-4 min-h-[60vh] w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-7 text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-300 disabled:opacity-60"
       />
 
