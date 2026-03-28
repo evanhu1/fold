@@ -18,6 +18,7 @@ type FoldResponse = {
 };
 
 type Step = "input" | "preview" | "folding";
+type InputAction = "extract" | "fold" | null;
 
 export default function Home() {
   const router = useRouter();
@@ -26,10 +27,29 @@ export default function Home() {
   const [title, setTitle] = useState<string | null>(null);
   const [markdown, setMarkdown] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [extracting, setExtracting] = useState(false);
+  const [inputAction, setInputAction] = useState<InputAction>(null);
 
-  async function handleExtract(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function createFold(payload: {
+    url?: string;
+    title?: string | null;
+    markdown?: string;
+  }) {
+    const response = await fetch("/api/folds", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const body = (await response.json()) as FoldResponse;
+
+    if (!response.ok) {
+      throw new Error(body.error ?? "Failed to create fold.");
+    }
+
+    router.push(body.path);
+  }
+
+  async function handleExtract() {
     setError(null);
 
     if (!url.trim()) {
@@ -37,7 +57,7 @@ export default function Home() {
       return;
     }
 
-    setExtracting(true);
+    setInputAction("extract");
 
     try {
       const response = await fetch("/api/extract", {
@@ -58,7 +78,26 @@ export default function Home() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to extract article.");
     } finally {
-      setExtracting(false);
+      setInputAction(null);
+    }
+  }
+
+  async function handleDirectFold(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    if (!url.trim()) {
+      setError("Enter a website URL.");
+      return;
+    }
+
+    setInputAction("fold");
+
+    try {
+      await createFold({ url });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create fold.");
+      setInputAction(null);
     }
   }
 
@@ -67,19 +106,7 @@ export default function Home() {
     setStep("folding");
 
     try {
-      const response = await fetch("/api/folds", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, title, markdown }),
-      });
-
-      const body = (await response.json()) as FoldResponse;
-
-      if (!response.ok) {
-        throw new Error(body.error ?? "Failed to create fold.");
-      }
-
-      router.push(body.path);
+      await createFold({ url, title, markdown });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create fold.");
       setStep("preview");
@@ -104,8 +131,8 @@ export default function Home() {
             read text at different levels of detail
           </p>
 
-          <form onSubmit={handleExtract} className="mt-10">
-            <div className="relative">
+          <form onSubmit={handleDirectFold} className="mt-10">
+            <div>
               <input
                 id="article-url"
                 type="url"
@@ -116,17 +143,38 @@ export default function Home() {
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder="Paste an article URL"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3.5 pr-24 text-sm text-slate-900 shadow-sm outline-none ring-slate-400 transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-offset-1 autofill:shadow-[inset_0_0_0px_1000px_white] autofill:[-webkit-text-fill-color:#0f172a]"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm text-slate-900 shadow-sm outline-none ring-slate-400 transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-offset-1 autofill:shadow-[inset_0_0_0px_1000px_white] autofill:[-webkit-text-fill-color:#0f172a]"
               />
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-center">
               <button
                 type="submit"
-                disabled={extracting}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={inputAction !== null}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {extracting ? (
-                  <span className="fold-loader" aria-hidden />
+                {inputAction === "fold" ? (
+                  <>
+                    <span className="fold-loader" aria-hidden />
+                    Folding...
+                  </>
                 ) : (
-                  "Next"
+                  "Fold"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleExtract}
+                disabled={inputAction !== null}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400"
+              >
+                {inputAction === "extract" ? (
+                  <>
+                    <span className="fold-loader" aria-hidden />
+                    Extracting...
+                  </>
+                ) : (
+                  "Extract text"
                 )}
               </button>
             </div>

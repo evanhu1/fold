@@ -8,6 +8,8 @@ import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import type { CompressionLevel } from "@/lib/types";
 
+const DEMO_STORAGE_KEY = "fold-demo-seen";
+
 type FoldViewerProps = {
   articleUrl?: string | null;
   articleTitle?: string | null;
@@ -18,6 +20,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [demoIndex, setDemoIndex] = useState<number | null>(null);
+  const [isDemoReady, setIsDemoReady] = useState(false);
   const searchParams = useSearchParams();
   const param = searchParams.get("level");
   const activeIndex = param
@@ -26,16 +29,35 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const baseIndex = activeIndex >= 0 ? activeIndex : 0;
   const safeActiveIndex = demoIndex !== null ? demoIndex : baseIndex;
 
-  // First-visit demo: animate slider to 10-word level and back
+  const setLevelInUrl = useCallback(
+    (index: number) => {
+      const url = new URL(window.location.href);
+      const target = String(levels[index].targetWords);
+      if (target === "full") {
+        url.searchParams.delete("level");
+      } else {
+        url.searchParams.set("level", target);
+      }
+      window.history.replaceState(null, "", url.toString());
+    },
+    [levels],
+  );
+
+  // First-visit demo: animate to the deepest available zoom level and stop there.
   useEffect(() => {
-    const STORAGE_KEY = "fold-demo-seen";
-    // if (localStorage.getItem(STORAGE_KEY)) return;
+    const targetIdx = levels.length - 1;
+    if (targetIdx <= 0) {
+      setIsDemoReady(true);
+      return;
+    }
 
-    // Find the 10-word level index
-    const targetIdx = levels.findIndex((l) => l.targetWords === 10);
-    if (targetIdx <= 0) return;
+    if (localStorage.getItem(DEMO_STORAGE_KEY)) {
+      setIsDemoReady(true);
+      return;
+    }
 
-    localStorage.setItem(STORAGE_KEY, "1");
+    localStorage.setItem(DEMO_STORAGE_KEY, "1");
+    setIsDemoReady(true);
 
     // Show overlay immediately, animate after delay
     setDemoIndex(0);
@@ -51,34 +73,19 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
       t += STEP_MS;
     }
 
-    // Pause at targetIdx
-    t += PAUSE_MS;
-
-    // Animate back: targetIdx → 0
-    for (let i = targetIdx - 1; i >= 0; i--) {
-      timers.push(setTimeout(() => setDemoIndex(i), t));
-      t += STEP_MS;
-    }
-
-    // Clear demo state
-    timers.push(setTimeout(() => setDemoIndex(null), t + 100));
+    // Persist the deepest zoom level when the demo finishes.
+    timers.push(setTimeout(() => setLevelInUrl(targetIdx), t + PAUSE_MS));
+    timers.push(setTimeout(() => setDemoIndex(null), t + PAUSE_MS + 100));
 
     return () => timers.forEach(clearTimeout);
-  }, [levels]);
+  }, [levels, setLevelInUrl]);
 
   const updateLevel = useCallback(
     (index: number) => {
       setDemoIndex(null); // cancel demo on user interaction
-      const url = new URL(window.location.href);
-      const target = String(levels[index].targetWords);
-      if (target === "full") {
-        url.searchParams.delete("level");
-      } else {
-        url.searchParams.set("level", target);
-      }
-      window.history.replaceState(null, "", url.toString());
+      setLevelInUrl(index);
     },
-    [levels],
+    [setLevelInUrl],
   );
 
   const current = levels[safeActiveIndex];
@@ -114,7 +121,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const isDemoing = demoIndex !== null;
 
   return (
-    <main className="relative mx-auto flex h-screen w-full max-w-4xl flex-col overflow-hidden px-6 py-8 md:px-10">
+    <main className={`relative mx-auto flex h-screen w-full max-w-4xl flex-col overflow-hidden px-6 py-8 transition-opacity md:px-10 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
       {/* Demo overlay */}
       {isDemoing && (
         <div className="fixed inset-0 z-40 bg-black/40 transition-opacity" />
@@ -201,16 +208,24 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
         {/* Desktop vertical slider */}
         <aside className={`hidden flex-col items-center justify-center md:flex ${isDemoing ? "relative z-50" : ""}`}>
           <div className={`flex flex-col items-center gap-3 rounded-2xl border border-slate-200 px-3 py-5 shadow-sm ${isDemoing ? "bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
-            <input
-              className="vertical-slider"
-              type="range"
-              min={0}
-              max={levels.length - 1}
-              step={1}
-              value={safeActiveIndex}
-              onChange={(event) => updateLevel(Number(event.target.value))}
-              aria-label="Compression zoom slider"
-            />
+            <div className="relative flex items-center justify-center">
+              <SliderTicks
+                count={levels.length}
+                activeIndex={safeActiveIndex}
+                orientation="vertical"
+                className="pointer-events-none absolute inset-0"
+              />
+              <input
+                className="vertical-slider relative z-10"
+                type="range"
+                min={0}
+                max={levels.length - 1}
+                step={1}
+                value={safeActiveIndex}
+                onChange={(event) => updateLevel(Number(event.target.value))}
+                aria-label="Compression zoom slider"
+              />
+            </div>
             <p className="text-center text-[11px] font-medium leading-tight text-slate-400">
               {currentSliderLabel}
             </p>
@@ -233,6 +248,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
           onChange={(event) => updateLevel(Number(event.target.value))}
           aria-label="Compression zoom slider"
         />
+        <SliderTicks count={levels.length} activeIndex={safeActiveIndex} className="mt-2" />
         <p className="mt-2 text-center text-[11px] font-medium leading-tight text-slate-400">
           Zoom Scale: {currentSliderLabel}
         </p>
@@ -250,4 +266,46 @@ function formatSliderLabel(target: CompressionLevel["targetWords"]): string {
     return `${short}k`;
   }
   return `${target}`;
+}
+
+function SliderTicks({
+  count,
+  activeIndex,
+  className = "",
+  orientation = "horizontal",
+}: {
+  count: number;
+  activeIndex: number;
+  className?: string;
+  orientation?: "horizontal" | "vertical";
+}) {
+  const isVertical = orientation === "vertical";
+
+  return (
+    <div
+      className={`${
+        isVertical
+          ? "flex h-full flex-col items-center justify-between py-2"
+          : "flex w-full items-start justify-between px-1"
+      } ${className}`.trim()}
+      aria-hidden="true"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        (() => {
+          const visualIndex = isVertical ? count - 1 - index : index;
+
+          return (
+        <span
+          key={visualIndex}
+          className={`rounded-full ${
+            isVertical ? "h-px w-5" : "h-2 w-px"
+          } ${
+            visualIndex === activeIndex ? "bg-slate-500" : "bg-slate-300"
+          }`}
+        />
+          );
+        })()
+      ))}
+    </div>
+  );
 }

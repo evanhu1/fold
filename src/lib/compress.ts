@@ -46,7 +46,7 @@ export class InputValidationError extends Error {
 }
 
 const SHARED_SYSTEM_PROMPT =
-  "You are a text compression engine. You will be given source text and a target word count. Your output MUST be close to the target word count — aim for 90-100% of the target. If the target is 2500 words, output around 2250-2500 words. Do not drastically undershoot. Preserve markdown formatting (headings, lists, bold, italics, links, paragraphs). Keep core facts and meaning. End cleanly with a complete thought. Do not add any title or heading. Return only the compressed body text.";
+  "You write progressive disclosure summaries of the same source text. You will be given a target word count and sometimes a previous shorter version. Your output MUST be close to the target word count — aim for 90-100% of the target. If the target is 2500 words, output around 2250-2500 words. Do not drastically undershoot. Preserve markdown formatting (headings, lists, bold, italics, links, paragraphs). Keep core facts and meaning. End cleanly with a complete thought. Do not add any title or heading. Return only the body text.";
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -96,9 +96,60 @@ function buildAnthropicSystemBlocks(
   ];
 }
 
-function buildUserPrompt(targetWords: number, text?: string): string {
-  const base = `Compress the following text to approximately ${targetWords} words.`;
-  return text ? `${base}\n\nText:\n${text}` : base;
+function buildUserPrompt({
+  targetWords,
+  sourceText,
+  previousVersion,
+  includeSourceText = true,
+}: {
+  targetWords: number;
+  sourceText?: string;
+  previousVersion?: string;
+  includeSourceText?: boolean;
+}): string {
+  const goal = previousVersion
+    ? `Expand the previous version to approximately ${targetWords} words.`
+    : `Write the shortest useful version of the source text in approximately ${targetWords} words.`;
+
+  const requirements = previousVersion
+    ? [
+        "Preserve all facts, claims, and framing already present in the previous version.",
+        "Keep the same structure and order when possible.",
+        "Reuse wording from the previous version unless changing it improves clarity or flow.",
+        "Add only the next most important missing details from the source text.",
+        "Do not remove earlier information or contradict it.",
+      ]
+    : [
+        "Capture only the highest-priority ideas and facts needed to understand the text.",
+        "Favor clarity and density over completeness.",
+      ];
+
+  const sections = [
+    goal,
+    "",
+    "Requirements:",
+    ...requirements.map((requirement) => `- ${requirement}`),
+  ];
+
+  if (previousVersion) {
+    sections.push(
+      "",
+      "<previous_version>",
+      previousVersion,
+      "</previous_version>",
+    );
+  }
+
+  if (includeSourceText && sourceText) {
+    sections.push(
+      "",
+      "<source_text>",
+      sourceText,
+      "</source_text>",
+    );
+  }
+
+  return sections.join("\n");
 }
 
 function buildAnthropicWarmupKey(
@@ -161,8 +212,9 @@ async function requestAnthropicCompression(
 }
 
 async function compressWithOpenAI(
-  text: string,
+  sourceText: string,
   targetWords: number,
+  previousVersion?: string,
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
@@ -187,7 +239,11 @@ async function compressWithOpenAI(
         },
         {
           role: "user",
-          content: buildUserPrompt(targetWords, text),
+          content: buildUserPrompt({
+            targetWords,
+            sourceText,
+            previousVersion,
+          }),
         },
       ],
     }),
@@ -210,6 +266,7 @@ async function compressWithOpenAI(
 async function compressWithAnthropic(
   canonicalSourceText: string,
   targetWords: number,
+  previousVersion?: string,
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
@@ -223,7 +280,11 @@ async function compressWithAnthropic(
       apiKey,
       model,
       canonicalSourceText,
-      buildUserPrompt(targetWords),
+      buildUserPrompt({
+        targetWords,
+        previousVersion,
+        includeSourceText: false,
+      }),
     );
     const content = extractAnthropicText(data);
 
@@ -238,8 +299,9 @@ async function compressWithAnthropic(
 }
 
 async function compressWithGemini(
-  text: string,
+  sourceText: string,
   targetWords: number,
+  previousVersion?: string,
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL ?? "gemini-3.1-pro-preview";
@@ -267,7 +329,11 @@ async function compressWithGemini(
           role: "user",
           parts: [
             {
-              text: buildUserPrompt(targetWords, text),
+              text: buildUserPrompt({
+                targetWords,
+                sourceText,
+                previousVersion,
+              }),
             },
           ],
         },
@@ -330,40 +396,43 @@ async function warmAnthropicPrefix(canonicalSourceText: string): Promise<void> {
 }
 
 async function compressWithLLM(
-  text: string,
+  sourceText: string,
   targetWords: number,
+  previousVersion?: string,
   canonicalSourceText?: string,
 ): Promise<string> {
   const provider = (process.env.LLM_PROVIDER ?? "").trim().toLowerCase();
 
   if (provider === "anthropic") {
     return compressWithAnthropic(
-      canonicalSourceText ?? buildCanonicalSourcePrefix(text),
+      canonicalSourceText ?? buildCanonicalSourcePrefix(sourceText),
       targetWords,
+      previousVersion,
     );
   }
 
   if (provider === "gemini") {
-    return compressWithGemini(text, targetWords);
+    return compressWithGemini(sourceText, targetWords, previousVersion);
   }
 
   if (provider === "openai") {
-    return compressWithOpenAI(text, targetWords);
+    return compressWithOpenAI(sourceText, targetWords, previousVersion);
   }
 
   if (process.env.ANTHROPIC_API_KEY) {
     return compressWithAnthropic(
-      canonicalSourceText ?? buildCanonicalSourcePrefix(text),
+      canonicalSourceText ?? buildCanonicalSourcePrefix(sourceText),
       targetWords,
+      previousVersion,
     );
   }
 
   if (process.env.OPENAI_API_KEY) {
-    return compressWithOpenAI(text, targetWords);
+    return compressWithOpenAI(sourceText, targetWords, previousVersion);
   }
 
   if (process.env.GEMINI_API_KEY) {
-    return compressWithGemini(text, targetWords);
+    return compressWithGemini(sourceText, targetWords, previousVersion);
   }
 
   throw new Error(
@@ -394,20 +463,31 @@ export async function buildCompressionLevels(inputText: string): Promise<{
     await warmAnthropicPrefix(canonicalSourceText);
   }
 
-  const compressions = await Promise.all(
-    targets.map(async (target) => {
-      const compressed = await compressWithLLM(
-        normalizedText,
-        target,
-        canonicalSourceText,
-      );
-      return {
-        target,
-        text: compressed,
-        source: "llm" as const,
-      };
-    }),
-  );
+  // Generate the ladder from smallest to largest so each version expands
+  // the previous one while keeping the full source text in scope.
+  const compressions: Array<{
+    target: number;
+    text: string;
+    source: "llm";
+  }> = [];
+  let previousVersion: string | undefined;
+
+  for (const target of [...targets].reverse()) {
+    const compressed = await compressWithLLM(
+      normalizedText,
+      target,
+      previousVersion,
+      canonicalSourceText,
+    );
+
+    compressions.push({
+      target,
+      text: compressed,
+      source: "llm",
+    });
+
+    previousVersion = compressed;
+  }
 
   const levels: CompressionLevel[] = [
     {
@@ -417,7 +497,7 @@ export async function buildCompressionLevels(inputText: string): Promise<{
       wordCount: inputWordCount,
       source: "original",
     },
-    ...compressions.map((entry) => ({
+    ...compressions.reverse().map((entry) => ({
       label: `${entry.target} words`,
       targetWords: entry.target,
       text: entry.text,
