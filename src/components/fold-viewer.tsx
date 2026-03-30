@@ -136,8 +136,8 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
           >
             Fold
           </Link>
-          <span className="hidden truncate text-sm text-slate-400 sm:block">
-            read text at different levels of detail
+          <span className="hidden truncate text-sm text-slate-500 sm:block">
+            Read text hyper-efficiently
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -283,11 +283,10 @@ function SliderTicks({
 
   return (
     <div
-      className={`${
-        isVertical
-          ? "flex h-full flex-col items-center justify-between py-2"
-          : "flex w-full items-start justify-between px-1"
-      } ${className}`.trim()}
+      className={`${isVertical
+        ? "flex h-full flex-col items-center justify-between py-2"
+        : "flex w-full items-start justify-between px-1"
+        } ${className}`.trim()}
       aria-hidden="true"
     >
       {Array.from({ length: count }, (_, index) => (
@@ -295,14 +294,12 @@ function SliderTicks({
           const visualIndex = isVertical ? count - 1 - index : index;
 
           return (
-        <span
-          key={visualIndex}
-          className={`rounded-full ${
-            isVertical ? "h-px w-5" : "h-2 w-px"
-          } ${
-            visualIndex === activeIndex ? "bg-slate-500" : "bg-slate-300"
-          }`}
-        />
+            <span
+              key={visualIndex}
+              className={`rounded-full ${isVertical ? "h-px w-5" : "h-2 w-px"
+                } ${visualIndex === activeIndex ? "bg-slate-500" : "bg-slate-300"
+                }`}
+            />
           );
         })()
       ))}

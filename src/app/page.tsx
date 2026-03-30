@@ -127,11 +127,11 @@ export default function Home() {
           <h1 className="font-serif text-5xl font-bold tracking-tight text-slate-900">
             Fold
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
-            read text at different levels of detail
+          <p className="mt-2 text-sm text-slate-500">
+            Read text hyper-efficiently
           </p>
 
-          <form onSubmit={handleDirectFold} className="mt-10">
+          <form onSubmit={handleDirectFold} className="mt-8">
             <div>
               <input
                 id="article-url"
