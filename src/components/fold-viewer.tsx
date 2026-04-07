@@ -23,10 +23,11 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const [isDemoReady, setIsDemoReady] = useState(false);
   const searchParams = useSearchParams();
   const param = searchParams.get("level");
+  const defaultIndex = levels.length > 1 ? levels.length - 1 : 0;
   const activeIndex = param
     ? levels.findIndex((level) => String(level.targetWords) === param)
-    : 0;
-  const baseIndex = activeIndex >= 0 ? activeIndex : 0;
+    : defaultIndex;
+  const baseIndex = activeIndex >= 0 ? activeIndex : defaultIndex;
   const safeActiveIndex = demoIndex !== null ? demoIndex : baseIndex;
 
   const setLevelInUrl = useCallback(
@@ -137,7 +138,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
             Fold
           </Link>
           <span className="hidden truncate text-sm text-slate-500 sm:block">
-            Read text hyper-efficiently
+            Read hyper efficiently
           </span>
         </div>
         <div className="flex items-center gap-2">

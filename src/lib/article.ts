@@ -97,9 +97,8 @@ export class ArticleExtractionError extends Error {
   }
 }
 
-export async function getArticle(url: string) {
+export function normalizeArticleUrl(url: string): string {
   let parsedUrl: URL;
-
   try {
     parsedUrl = new URL(url);
   } catch {
@@ -109,6 +108,41 @@ export async function getArticle(url: string) {
   if (!["http:", "https:"].includes(parsedUrl.protocol)) {
     throw new ArticleExtractionError("URL must start with http:// or https://.");
   }
+
+  parsedUrl.hash = "";
+
+  const trackingParams = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "utm_id",
+    "utm_reader",
+    "utm_name",
+    "utm_cid",
+    "utm_pubreferrer",
+    "utm_swu",
+    "fbclid",
+    "gclid",
+    "mc_cid",
+    "mc_eid",
+    "ref",
+    "ref_src",
+  ] as const;
+
+  for (const key of trackingParams) {
+    parsedUrl.searchParams.delete(key);
+  }
+
+  parsedUrl.searchParams.sort();
+
+  return parsedUrl.toString();
+}
+
+export async function getArticle(url: string) {
+  const normalizedUrl = normalizeArticleUrl(url);
+  const parsedUrl = new URL(normalizedUrl);
 
   const response = await fetch(parsedUrl, {
     headers: {
@@ -167,7 +201,7 @@ export async function getArticle(url: string) {
     excerpt: article.excerpt,
     siteName: article.siteName,
     lang: article.lang,
-    url: parsedUrl.toString(),
+    url: normalizedUrl,
     markdown,
     wordCount: countWords(markdown),
   };

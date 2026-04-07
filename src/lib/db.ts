@@ -64,6 +64,12 @@ async function ensureSchema(): Promise<void> {
         DROP COLUMN IF EXISTS original_word_count
       `),
     )
+    .then(() =>
+      sql.query(`
+        CREATE INDEX IF NOT EXISTS folds_article_url_created_at_idx
+        ON folds (article_url, created_at DESC)
+      `),
+    )
     .then(() => undefined)
     .catch((error: unknown) => {
       global.__foldDbReady__ = undefined;
@@ -121,6 +127,36 @@ export async function getFoldById(id: string): Promise<FoldRecord | null> {
      FROM folds
      WHERE id = $1`,
     [id],
+  )) as FoldRow[];
+
+  const row = result[0];
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    articleUrl: row.article_url,
+    articleTitle: row.article_title,
+    originalText: row.original_text,
+    levels: JSON.parse(row.levels_json) as CompressionLevel[],
+    createdAt: row.created_at,
+  };
+}
+
+export async function getLatestFoldByArticleUrl(
+  articleUrl: string,
+): Promise<FoldRecord | null> {
+  await ensureSchema();
+
+  const sql = getSql();
+  const result = (await sql.query(
+    `SELECT id, article_url, article_title, original_text, levels_json::text, created_at
+     FROM folds
+     WHERE article_url = $1
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [articleUrl],
   )) as FoldRow[];
 
   const row = result[0];

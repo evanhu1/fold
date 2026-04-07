@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildCompressionLevels, InputValidationError } from "@/lib/compress";
-import { ArticleExtractionError, getArticle } from "@/lib/article";
-import { saveFold } from "@/lib/db";
+import {
+  ArticleExtractionError,
+  getArticle,
+  normalizeArticleUrl,
+} from "@/lib/article";
+import { getLatestFoldByArticleUrl, saveFold } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -18,6 +22,24 @@ export async function POST(request: NextRequest) {
     let title = payload.title?.trim() || null;
 
     if (!markdown && articleUrl) {
+      articleUrl = normalizeArticleUrl(articleUrl);
+
+      const cachedFold = await getLatestFoldByArticleUrl(articleUrl);
+      if (cachedFold) {
+        const path = `/${cachedFold.id}`;
+        const shareUrl = new URL(path, request.url).toString();
+
+        return NextResponse.json(
+          {
+            id: cachedFold.id,
+            path,
+            shareUrl,
+            cached: true,
+          },
+          { status: 200 },
+        );
+      }
+
       const article = await getArticle(articleUrl);
       markdown = article.markdown;
       articleUrl = article.url;
@@ -42,6 +64,7 @@ export async function POST(request: NextRequest) {
         id: fold.id,
         path,
         shareUrl,
+        cached: false,
       },
       { status: 201 },
     );
