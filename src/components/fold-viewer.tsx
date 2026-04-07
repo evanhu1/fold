@@ -114,18 +114,18 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const isDemoing = demoIndex !== null;
 
   return (
-    <main className={`relative mx-auto flex h-screen w-full max-w-4xl flex-col overflow-hidden px-6 py-8 transition-opacity md:px-10 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
+    <main className={`relative mx-auto flex h-screen w-full max-w-4xl flex-col overflow-hidden px-3 py-3 transition-opacity sm:px-4 md:px-5 md:py-4 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
       {/* Demo overlay */}
       {isDemoing && (
         <div className="fixed inset-0 z-40 bg-black/40 transition-opacity" />
       )}
 
       {/* Header */}
-      <header className="flex items-center justify-between gap-4">
-        <div className="min-w-0 flex flex-col md:flex-row md:items-baseline md:gap-3">
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex flex-col md:flex-row md:items-baseline md:gap-2">
           <Link
             href="/"
-            className="shrink-0 font-serif text-4xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
+            className="shrink-0 font-serif text-3xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600 md:text-[2rem]"
           >
             Fold
           </Link>
@@ -153,10 +153,10 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
 
 
       {/* Content area with slider */}
-      <section className="relative mt-6 flex min-h-0 flex-1 gap-6">
+      <section className="relative mt-3 flex min-h-0 flex-1 gap-3 md:mt-4 md:gap-4">
         {/* Article card */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
-          <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 px-6 py-3">
+          <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 px-4 py-2.5 md:px-5">
             {articleUrl && (
               <a
                 href={articleUrl}
@@ -191,7 +191,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
               {current.wordCount} words
             </p>
           </div>
-          <article className="markdown-output min-h-0 flex-1 overflow-y-auto px-6 py-5 text-[15px] leading-7 text-slate-700">
+          <article className="markdown-output min-h-0 flex-1 overflow-y-auto px-4 py-4 text-[15px] leading-7 text-slate-700 md:px-5">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
               {current.text}
             </ReactMarkdown>
@@ -200,7 +200,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
 
         {/* Desktop vertical slider */}
         <aside className={`hidden flex-col items-center justify-center md:flex ${isDemoing ? "relative z-50" : ""}`}>
-          <div className={`flex flex-col items-center gap-3 rounded-2xl border border-slate-200 px-3 py-5 shadow-sm ${isDemoing ? "bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
+          <div className={`flex flex-col items-center gap-2 rounded-2xl border border-slate-200 px-2.5 py-4 shadow-sm ${isDemoing ? "bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
             <div className="relative flex items-center justify-center">
               <SliderTicks
                 count={levels.length}
@@ -230,7 +230,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
       </section>
 
       {/* Mobile horizontal slider */}
-      <aside className={`mt-4 rounded-2xl border border-slate-200 p-3 shadow-sm md:hidden ${isDemoing ? "relative z-50 bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
+      <aside className={`mt-2 rounded-2xl border border-slate-200 px-3 py-2 shadow-sm md:hidden ${isDemoing ? "relative z-50 bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
         <input
           className="mobile-slider"
           type="range"
@@ -241,10 +241,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
           onChange={(event) => updateLevel(Number(event.target.value))}
           aria-label="Compression zoom slider"
         />
-        <SliderTicks count={levels.length} activeIndex={safeActiveIndex} className="mt-2" />
-        <p className="mt-2 text-center text-[11px] font-medium leading-tight text-slate-400">
-          Zoom Scale: {currentSliderLabel}
-        </p>
+        <SliderTicks count={levels.length} activeIndex={safeActiveIndex} className="mt-1" />
       </aside>
     </main>
   );
