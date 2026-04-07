@@ -34,11 +34,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
     (index: number) => {
       const url = new URL(window.location.href);
       const target = String(levels[index].targetWords);
-      if (target === "full") {
-        url.searchParams.delete("level");
-      } else {
-        url.searchParams.set("level", target);
-      }
+      url.searchParams.set("level", target);
       window.history.replaceState(null, "", url.toString());
     },
     [levels],
@@ -96,11 +92,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
     try {
       const url = new URL(window.location.href);
       const target = String(current.targetWords);
-      if (target === "full") {
-        url.searchParams.delete("level");
-      } else {
-        url.searchParams.set("level", target);
-      }
+      url.searchParams.set("level", target);
       await navigator.clipboard.writeText(url.toString());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
