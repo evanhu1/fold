@@ -230,19 +230,25 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
       </section>
 
       {/* Mobile horizontal slider */}
-      <aside className={`mt-2 rounded-2xl border border-slate-200 px-3 py-2 shadow-sm md:hidden ${isDemoing ? "relative z-50 bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
-        <input
-          className="mobile-slider"
-          type="range"
-          min={0}
-          max={levels.length - 1}
-          step={1}
-          value={safeActiveIndex}
-          onChange={(event) => updateLevel(Number(event.target.value))}
-          aria-label="Compression zoom slider"
-        />
-        <SliderTicks count={levels.length} activeIndex={safeActiveIndex} className="mt-1" />
-        <p className="mt-1 text-center text-[10px] font-medium uppercase tracking-wider text-slate-400">
+      <aside className={`mt-2 rounded-2xl border border-slate-200 px-3 py-3 shadow-sm md:hidden ${isDemoing ? "relative z-50 bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
+        <div className="relative flex items-center justify-center px-2">
+          <SliderTicks
+            count={levels.length}
+            activeIndex={safeActiveIndex}
+            className="pointer-events-none absolute inset-0"
+          />
+          <input
+            className="mobile-slider relative z-10"
+            type="range"
+            min={0}
+            max={levels.length - 1}
+            step={1}
+            value={safeActiveIndex}
+            onChange={(event) => updateLevel(Number(event.target.value))}
+            aria-label="Compression zoom slider"
+          />
+        </div>
+        <p className="mt-2 text-center text-[10px] font-medium uppercase tracking-wider text-slate-400">
           Zoom Level
         </p>
       </aside>
@@ -278,7 +284,7 @@ function SliderTicks({
     <div
       className={`${isVertical
         ? "flex h-full flex-col items-center justify-between py-2"
-        : "flex w-full items-start justify-between px-1"
+        : "flex h-full w-full items-center justify-between px-2"
         } ${className}`.trim()}
       aria-hidden="true"
     >
@@ -290,7 +296,7 @@ function SliderTicks({
             <span
               key={visualIndex}
               className={`rounded-full ${isVertical ? "h-px w-5" : "h-2 w-px"
-                } ${visualIndex === activeIndex ? "bg-slate-500" : "bg-slate-300"
+                } ${isVertical ? "" : "w-1.5"} ${visualIndex === activeIndex ? "bg-slate-500" : "bg-slate-300"
                 }`}
             />
           );
