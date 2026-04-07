@@ -114,7 +114,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const isDemoing = demoIndex !== null;
 
   return (
-    <main className={`relative mx-auto flex h-dvh w-full max-w-4xl flex-col overflow-hidden box-border px-3 py-3 transition-opacity sm:px-4 md:px-5 md:py-4 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
+    <main className={`fixed inset-0 mx-auto flex h-dvh w-full max-w-4xl flex-col overflow-hidden box-border px-3 py-3 transition-opacity sm:px-4 md:px-5 md:py-4 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
       {/* Demo overlay */}
       {isDemoing && (
         <div className="fixed inset-0 z-40 bg-black/40 transition-opacity" />
