@@ -114,7 +114,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
   const isDemoing = demoIndex !== null;
 
   return (
-    <main className={`relative mx-auto flex h-screen w-full max-w-4xl flex-col overflow-hidden px-3 py-3 transition-opacity sm:px-4 md:px-5 md:py-4 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
+    <main className={`relative mx-auto flex h-dvh w-full max-w-4xl flex-col overflow-hidden box-border px-3 py-3 transition-opacity sm:px-4 md:px-5 md:py-4 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
       {/* Demo overlay */}
       {isDemoing && (
         <div className="fixed inset-0 z-40 bg-black/40 transition-opacity" />
@@ -242,6 +242,9 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
           aria-label="Compression zoom slider"
         />
         <SliderTicks count={levels.length} activeIndex={safeActiveIndex} className="mt-1" />
+        <p className="mt-1 text-center text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          Zoom Level
+        </p>
       </aside>
     </main>
   );
