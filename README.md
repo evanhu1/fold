@@ -11,7 +11,7 @@ Fold is a Next.js App Router app that extracts article text from a URL, compress
 
 1. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 2. Set environment variables:
    ```bash
@@ -20,7 +20,7 @@ Fold is a Next.js App Router app that extracts article text from a URL, compress
 3. Add your Neon database URL and API key in `.env.local`.
 4. Run the app:
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
 ## Behavior

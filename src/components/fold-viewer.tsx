@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
@@ -40,15 +40,11 @@ export default function FoldViewer({
   articleTree,
 }: FoldViewerProps) {
   const [copied, setCopied] = useState(false);
-  const [copiedText, setCopiedText] = useState(false);
   const [isRootOpen, setIsRootOpen] = useState(false);
   const [sectionStages, setSectionStages] = useState<Record<string, SectionStage>>(
     {},
   );
-  const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => setMounted(true), []);
 
   function toggleRoot() {
     setIsRootOpen((current) => {
@@ -92,18 +88,6 @@ export default function FoldViewer({
     }
   }
 
-  async function copyCurrentText() {
-    try {
-      await navigator.clipboard.writeText(
-        buildVisibleTreeCopy(articleTitle, articleTree, isRootOpen, sectionStages),
-      );
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2000);
-    } catch {
-      setCopiedText(false);
-    }
-  }
-
   function toggleTheme() {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   }
@@ -144,7 +128,7 @@ export default function FoldViewer({
             aria-label="Toggle theme"
             className="cursor-pointer text-slate-400 transition hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
           >
-            {mounted && resolvedTheme === "dark" ? (
+            {resolvedTheme === "dark" ? (
               <Sun className="h-4 w-4" />
             ) : (
               <Moon className="h-4 w-4" />
@@ -251,33 +235,4 @@ export default function FoldViewer({
       </article>
     </main>
   );
-}
-
-function buildVisibleTreeCopy(
-  title: string | null | undefined,
-  articleTree: ArticleTree,
-  isRootOpen: boolean,
-  sectionStages: Record<string, SectionStage>,
-): string {
-  const lines = [title || "Fold", "", articleTree.rootClaim];
-
-  if (!isRootOpen) {
-    return lines.join("\n");
-  }
-
-  for (const [index, section] of articleTree.sections.entries()) {
-    const stage = sectionStages[section.id] ?? 0;
-
-    lines.push("", `${index + 1}. ${section.claim}`);
-
-    if (stage >= 1) {
-      lines.push(section.summary);
-    }
-
-    if (stage === 2) {
-      lines.push("", section.sourceMarkdown);
-    }
-  }
-
-  return lines.join("\n");
 }
