@@ -1,15 +1,8 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 :root {
   --background: #f5f7fa;
   --foreground: #0f172a;
-}
-
-.dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
 }
 
 @theme inline {
@@ -194,20 +187,11 @@ body {
   color: #334155;
 }
 
-.dark .markdown-output blockquote {
-  border-left-color: #334155;
-  color: #94a3b8;
-}
-
 .markdown-output code {
   border-radius: 6px;
   background: #e2e8f0;
   padding: 0.1rem 0.35rem;
   font-size: 0.9em;
-}
-
-.dark .markdown-output code {
-  background: #1e293b;
 }
 
 .markdown-output pre {
@@ -217,10 +201,6 @@ body {
   background: #0f172a;
   padding: 0.8rem 0.9rem;
   color: #e2e8f0;
-}
-
-.dark .markdown-output pre {
-  background: #020617;
 }
 
 .markdown-output pre code {
@@ -253,10 +233,6 @@ body {
   text-align: left;
 }
 
-.dark .markdown-output th,
-.dark .markdown-output td {
-  border-color: #334155;
-}
 
 .dark .markdown-output a {
   color: #cbd5e1;
