@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildCompressionLevels, InputValidationError } from "@/lib/compress";
+import { buildArticleTree, InputValidationError } from "@/lib/article-tree";
 import {
   ArticleExtractionError,
   getArticle,
@@ -46,14 +46,14 @@ export async function POST(request: NextRequest) {
       title = title ?? (article.title?.trim() || null);
     }
 
-    const { normalizedText, levels } =
-      await buildCompressionLevels(markdown);
+    const { normalizedText, articleTree } =
+      await buildArticleTree(markdown);
 
     const fold = await saveFold({
       articleUrl,
       articleTitle: title,
       originalText: normalizedText,
-      levels,
+      articleTree,
     });
 
     const path = `/${fold.id}`;
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     const message =
-      error instanceof Error ? error.message : "Failed to create folded text.";
+      error instanceof Error ? error.message : "Failed to create fold.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

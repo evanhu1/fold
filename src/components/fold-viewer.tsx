@@ -1,99 +1,67 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import type { CompressionLevel } from "@/lib/types";
-
-const DEMO_STORAGE_KEY = "fold-demo-seen";
+import type { ArticleTree } from "@/lib/types";
 
 type FoldViewerProps = {
   articleUrl?: string | null;
   articleTitle?: string | null;
-  levels: CompressionLevel[];
+  articleTree: ArticleTree;
 };
 
-export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldViewerProps) {
+type SectionStage = 0 | 1 | 2;
+
+export default function FoldViewer({
+  articleUrl,
+  articleTitle,
+  articleTree,
+}: FoldViewerProps) {
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
-  const [demoIndex, setDemoIndex] = useState<number | null>(null);
-  const [isDemoReady, setIsDemoReady] = useState(false);
-  const searchParams = useSearchParams();
-  const param = searchParams.get("level");
-  const defaultIndex = levels.length > 1 ? levels.length - 1 : 0;
-  const activeIndex = param
-    ? levels.findIndex((level) => String(level.targetWords) === param)
-    : defaultIndex;
-  const baseIndex = activeIndex >= 0 ? activeIndex : defaultIndex;
-  const safeActiveIndex = demoIndex !== null ? demoIndex : baseIndex;
-
-  const setLevelInUrl = useCallback(
-    (index: number) => {
-      const url = new URL(window.location.href);
-      const target = String(levels[index].targetWords);
-      url.searchParams.set("level", target);
-      window.history.replaceState(null, "", url.toString());
-    },
-    [levels],
+  const [isRootOpen, setIsRootOpen] = useState(false);
+  const [sectionStages, setSectionStages] = useState<Record<string, SectionStage>>(
+    {},
   );
 
-  // First-visit demo: animate to the deepest available zoom level and stop there.
-  useEffect(() => {
-    const targetIdx = levels.length - 1;
-    if (targetIdx <= 0) {
-      setIsDemoReady(true);
-      return;
-    }
+  function toggleRoot() {
+    setIsRootOpen((current) => {
+      if (current) {
+        setSectionStages({});
+      }
 
-    if (localStorage.getItem(DEMO_STORAGE_KEY)) {
-      setIsDemoReady(true);
-      return;
-    }
+      return !current;
+    });
+  }
 
-    localStorage.setItem(DEMO_STORAGE_KEY, "1");
-    setIsDemoReady(true);
+  function toggleClaim(sectionId: string) {
+    setSectionStages((current) => {
+      const stage = current[sectionId] ?? 0;
 
-    // Show overlay immediately, animate after delay
-    setDemoIndex(0);
+      return {
+        ...current,
+        [sectionId]: stage === 0 ? 1 : 0,
+      };
+    });
+  }
 
-    const STEP_MS = 180;
-    const PAUSE_MS = 800;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    let t = 1000; // delay before slider starts moving
+  function toggleSummary(sectionId: string) {
+    setSectionStages((current) => {
+      const stage = current[sectionId] ?? 1;
 
-    // Animate forward: 0 → targetIdx
-    for (let i = 1; i <= targetIdx; i++) {
-      timers.push(setTimeout(() => setDemoIndex(i), t));
-      t += STEP_MS;
-    }
-
-    // Persist the deepest zoom level when the demo finishes.
-    timers.push(setTimeout(() => setLevelInUrl(targetIdx), t + PAUSE_MS));
-    timers.push(setTimeout(() => setDemoIndex(null), t + PAUSE_MS + 100));
-
-    return () => timers.forEach(clearTimeout);
-  }, [levels, setLevelInUrl]);
-
-  const updateLevel = useCallback(
-    (index: number) => {
-      setDemoIndex(null); // cancel demo on user interaction
-      setLevelInUrl(index);
-    },
-    [setLevelInUrl],
-  );
-
-  const current = levels[safeActiveIndex];
-  const currentSliderLabel = formatSliderLabel(current.targetWords);
+      return {
+        ...current,
+        [sectionId]: stage === 2 ? 1 : 2,
+      };
+    });
+  }
 
   async function copyShareLink() {
     try {
-      const url = new URL(window.location.href);
-      const target = String(current.targetWords);
-      url.searchParams.set("level", target);
-      await navigator.clipboard.writeText(url.toString());
+      await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -103,7 +71,9 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
 
   async function copyCurrentText() {
     try {
-      await navigator.clipboard.writeText(current.text);
+      await navigator.clipboard.writeText(
+        buildVisibleTreeCopy(articleTitle, articleTree, isRootOpen, sectionStages),
+      );
       setCopiedText(true);
       setTimeout(() => setCopiedText(false), 2000);
     } catch {
@@ -111,16 +81,8 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
     }
   }
 
-  const isDemoing = demoIndex !== null;
-
   return (
-    <main className={`fixed inset-0 mx-auto flex h-dvh w-full max-w-4xl flex-col overflow-hidden box-border px-3 py-3 transition-opacity sm:px-4 md:px-5 md:py-4 ${isDemoReady ? "opacity-100" : "opacity-0"}`}>
-      {/* Demo overlay */}
-      {isDemoing && (
-        <div className="fixed inset-0 z-40 bg-black/40 transition-opacity" />
-      )}
-
-      {/* Header */}
+    <main className="fixed inset-0 mx-auto flex h-dvh w-full max-w-4xl flex-col overflow-hidden box-border px-3 py-3 transition-opacity sm:px-4 md:px-5 md:py-4">
       <header className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex flex-col md:flex-row md:items-baseline md:gap-2">
           <Link
@@ -151,10 +113,7 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
         </div>
       </header>
 
-
-      {/* Content area with slider */}
       <section className="relative mt-3 flex min-h-0 flex-1 gap-3 md:mt-4 md:gap-4">
-        {/* Article card */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
           <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 px-4 py-2.5 md:px-5">
             {articleUrl && (
@@ -185,123 +144,121 @@ export default function FoldViewer({ articleUrl, articleTitle, levels }: FoldVie
               </a>
             )}
             <p className="min-w-0 flex-1 truncate text-xs font-medium text-slate-500">
-              {articleTitle || `${currentSliderLabel}${current.targetWords !== "full" ? " words" : ""}`}
+              {articleTitle || "Fold"}
             </p>
             <p className="shrink-0 text-xs tabular-nums text-slate-400">
-              {current.wordCount} words
+              {articleTree.sections.length} sections
             </p>
           </div>
-          <article className="markdown-output min-h-0 flex-1 overflow-y-auto px-4 py-4 text-[15px] leading-7 text-slate-700 md:px-5">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-              {current.text}
-            </ReactMarkdown>
+
+          <article className="min-h-0 flex-1 overflow-y-auto px-4 py-4 text-[15px] leading-7 text-slate-700 md:px-5">
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={toggleRoot}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-base font-medium leading-7 text-slate-900">
+                    {articleTree.rootClaim}
+                  </p>
+                  <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                    {isRootOpen ? "Hide" : "Open"}
+                  </span>
+                </div>
+              </button>
+
+              {isRootOpen && (
+                <div className="space-y-3">
+                  {articleTree.sections.map((section, index) => {
+                    const stage = sectionStages[section.id] ?? 0;
+
+                    return (
+                      <div key={section.id} className="space-y-2 pl-4">
+                        <button
+                          type="button"
+                          onClick={() => toggleClaim(section.id)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-300"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500">
+                                {index + 1}
+                              </span>
+                              <p className="text-sm leading-6 text-slate-800">
+                                {section.claim}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                              {stage === 0 ? "Open" : "Close"}
+                            </span>
+                          </div>
+                        </button>
+
+                        {stage >= 1 && (
+                          <div className="space-y-2 pl-4">
+                            <button
+                              type="button"
+                              onClick={() => toggleSummary(section.id)}
+                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <p className="text-sm leading-6 text-slate-700">
+                                  {section.summary}
+                                </p>
+                                <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                                  {stage === 2 ? "Hide" : "Text"}
+                                </span>
+                              </div>
+                            </button>
+
+                            {stage === 2 && (
+                              <div className="markdown-output rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                  {section.sourceMarkdown}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </article>
         </div>
-
-        {/* Desktop vertical slider */}
-        <aside className={`hidden flex-col items-center justify-center md:flex ${isDemoing ? "relative z-50" : ""}`}>
-          <div className={`flex flex-col items-center gap-2 rounded-2xl border border-slate-200 px-2.5 py-4 shadow-sm ${isDemoing ? "bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
-            <div className="relative flex items-center justify-center">
-              <SliderTicks
-                count={levels.length}
-                activeIndex={safeActiveIndex}
-                orientation="vertical"
-                className="pointer-events-none absolute inset-0"
-              />
-              <input
-                className="vertical-slider relative z-10"
-                type="range"
-                min={0}
-                max={levels.length - 1}
-                step={1}
-                value={safeActiveIndex}
-                onChange={(event) => updateLevel(Number(event.target.value))}
-                aria-label="Compression zoom slider"
-              />
-            </div>
-            <p className="text-center text-[11px] font-medium leading-tight text-slate-400">
-              {currentSliderLabel}
-            </p>
-          </div>
-          <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-slate-400">
-            Zoom
-          </p>
-        </aside>
       </section>
-
-      {/* Mobile horizontal slider */}
-      <aside className={`mt-2 rounded-2xl border border-slate-200 px-3 py-3 shadow-sm md:hidden ${isDemoing ? "relative z-50 bg-white ring-2 ring-slate-900/10" : "bg-white/90"}`}>
-        <div className="relative flex items-center justify-center px-2">
-          <SliderTicks
-            count={levels.length}
-            activeIndex={safeActiveIndex}
-            className="pointer-events-none absolute inset-0"
-          />
-          <input
-            className="mobile-slider relative z-10"
-            type="range"
-            min={0}
-            max={levels.length - 1}
-            step={1}
-            value={safeActiveIndex}
-            onChange={(event) => updateLevel(Number(event.target.value))}
-            aria-label="Compression zoom slider"
-          />
-        </div>
-        <p className="mt-2 text-center text-[10px] font-medium uppercase tracking-wider text-slate-400">
-          Zoom Level
-        </p>
-      </aside>
     </main>
   );
 }
 
-function formatSliderLabel(target: CompressionLevel["targetWords"]): string {
-  if (target === "full") {
-    return "Full";
+function buildVisibleTreeCopy(
+  title: string | null | undefined,
+  articleTree: ArticleTree,
+  isRootOpen: boolean,
+  sectionStages: Record<string, SectionStage>,
+): string {
+  const lines = [title || "Fold", "", articleTree.rootClaim];
+
+  if (!isRootOpen) {
+    return lines.join("\n");
   }
-  if (target >= 1000) {
-    const short = target % 1000 === 0 ? `${target / 1000}` : (target / 1000).toFixed(1);
-    return `${short}k`;
+
+  for (const [index, section] of articleTree.sections.entries()) {
+    const stage = sectionStages[section.id] ?? 0;
+
+    lines.push("", `${index + 1}. ${section.claim}`);
+
+    if (stage >= 1) {
+      lines.push(section.summary);
+    }
+
+    if (stage === 2) {
+      lines.push("", section.sourceMarkdown);
+    }
   }
-  return `${target}`;
-}
 
-function SliderTicks({
-  count,
-  activeIndex,
-  className = "",
-  orientation = "horizontal",
-}: {
-  count: number;
-  activeIndex: number;
-  className?: string;
-  orientation?: "horizontal" | "vertical";
-}) {
-  const isVertical = orientation === "vertical";
-
-  return (
-    <div
-      className={`${isVertical
-        ? "flex h-full flex-col items-center justify-between py-2"
-        : "flex h-full w-full items-center justify-between px-2"
-        } ${className}`.trim()}
-      aria-hidden="true"
-    >
-      {Array.from({ length: count }, (_, index) => (
-        (() => {
-          const visualIndex = isVertical ? count - 1 - index : index;
-
-          return (
-            <span
-              key={visualIndex}
-              className={`rounded-full ${isVertical ? "h-px w-5" : "h-2 w-px"
-                } ${isVertical ? "" : "w-1.5"} ${visualIndex === activeIndex ? "bg-slate-500" : "bg-slate-300"
-                }`}
-            />
-          );
-        })()
-      ))}
-    </div>
-  );
+  return lines.join("\n");
 }

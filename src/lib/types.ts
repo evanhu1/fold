@@ -1,9 +1,15 @@
-export type CompressionLevel = {
-  label: string;
-  targetWords: number | "full";
-  text: string;
-  wordCount: number;
-  source: "original" | "llm";
+export type ArticleTreeSection = {
+  id: string;
+  claim: string;
+  summary: string;
+  sourceMarkdown: string;
+  sourceWordCount: number;
+};
+
+export type ArticleTree = {
+  format: "article-tree/v1";
+  rootClaim: string;
+  sections: ArticleTreeSection[];
 };
 
 export type FoldRecord = {
@@ -11,6 +17,6 @@ export type FoldRecord = {
   articleUrl: string | null;
   articleTitle: string | null;
   originalText: string;
-  levels: CompressionLevel[];
+  articleTree: ArticleTree;
   createdAt: string;
 };

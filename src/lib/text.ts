@@ -1,23 +1,4 @@
 export const MAX_INPUT_WORDS = 50000;
-const SCALE_TARGETS = [5000, 2500, 1000, 500, 250, 100, 10] as const;
-
-export function selectCompressionTargets(originalWordCount: number): number[] {
-  let current = originalWordCount;
-  const targets: number[] = [];
-
-  while (current > 1) {
-    const threshold = current / 2;
-    const next = SCALE_TARGETS.find((target) => target <= threshold);
-    if (!next) {
-      break;
-    }
-
-    targets.push(next);
-    current = next;
-  }
-
-  return targets;
-}
 
 export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
