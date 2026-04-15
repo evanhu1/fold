@@ -87,7 +87,7 @@ export default function FoldViewer({
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-5 py-5 md:px-8 md:pt-16 md:pb-6">
+    <main className="mx-auto min-h-screen w-full max-w-2xl bg-white px-5 py-5 md:px-8 md:pt-16 md:pb-6">
       <header className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div className="flex min-w-0 items-baseline gap-2">
           <Link
@@ -128,7 +128,7 @@ export default function FoldViewer({
         <button
           type="button"
           onClick={toggleRoot}
-          className="group -mx-2 my-4 md:my-5 flex w-[calc(100%+1rem)] cursor-pointer items-start justify-between gap-4 rounded-xl p-2 text-left transition-colors hover:bg-slate-100 active:bg-slate-100"
+          className="group -mx-2 my-4 md:my-5 flex w-[calc(100%+1rem)] cursor-pointer items-start justify-between gap-4 rounded-xl p-2 pr-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
         >
           <p className="select-text text-base font-medium leading-7 text-slate-900 transition group-hover:text-slate-700">
             {articleTree.rootClaim}
@@ -154,7 +154,7 @@ export default function FoldViewer({
                   <button
                     type="button"
                     onClick={() => toggleClaim(section.id)}
-                    className="group flex w-full cursor-pointer items-start gap-2 rounded-xl py-3 md:py-4 text-left transition-colors hover:bg-slate-100 active:bg-slate-100"
+                    className="group flex w-full cursor-pointer items-start gap-2 rounded-xl py-3 pr-1 md:py-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
                   >
                     <span className="w-4 shrink-0 pt-[3px] text-right text-[11px] tabular-nums text-slate-400 transition group-hover:text-slate-600">
                       {index + 1}
@@ -177,7 +177,7 @@ export default function FoldViewer({
                       <button
                         type="button"
                         onClick={() => toggleSummary(section.id)}
-                        className="group/sum flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl pb-3 md:pb-4 text-left transition-colors hover:bg-slate-100 active:bg-slate-100"
+                        className="group/sum flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl pb-3 pr-1 md:pb-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
                       >
                         <p className="select-text text-sm leading-6 text-slate-600 transition group-hover/sum:text-slate-800">
                           {section.summary}
