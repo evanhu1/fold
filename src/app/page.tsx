@@ -128,7 +128,7 @@ export default function Home() {
             Fold
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Read hyper efficiently
+            Read hyper efficiently with AI
           </p>
 
           <form onSubmit={handleDirectFold} className="mt-4">
