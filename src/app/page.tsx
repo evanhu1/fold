@@ -131,8 +131,8 @@ export default function Home() {
             Read hyper efficiently
           </p>
 
-          <form onSubmit={handleDirectFold} className="mt-8">
-            <div>
+          <form onSubmit={handleDirectFold} className="mt-4">
+            <div className="flex items-stretch gap-2">
               <input
                 id="article-url"
                 type="url"
@@ -143,15 +143,12 @@ export default function Home() {
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder="Paste an article URL"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm text-slate-900 shadow-sm outline-none ring-slate-400 transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-offset-1 autofill:shadow-[inset_0_0_0px_1000px_white] autofill:[-webkit-text-fill-color:#0f172a]"
+                className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-900 shadow-sm outline-none ring-slate-400 transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-offset-1 autofill:shadow-[inset_0_0_0px_1000px_white] autofill:[-webkit-text-fill-color:#0f172a]"
               />
-            </div>
-
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-center">
               <button
                 type="submit"
                 disabled={inputAction !== null}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-slate-900 px-5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 {inputAction === "fold" ? (
                   <>
@@ -162,11 +159,14 @@ export default function Home() {
                   "Fold"
                 )}
               </button>
+            </div>
+
+            <div className="mt-3 flex flex-row justify-center gap-2">
               <button
                 type="button"
                 onClick={handleExtract}
                 disabled={inputAction !== null}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400"
+                className="inline-flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-300"
               >
                 {inputAction === "extract" ? (
                   <>
@@ -174,21 +174,20 @@ export default function Home() {
                     Extracting...
                   </>
                 ) : (
-                  "Extract text"
+                  "Extract text from URL"
                 )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("preview")}
+                className="inline-flex items-center justify-center px-2 py-2.5 text-sm text-slate-500 transition hover:text-slate-900"
+              >
+                Use custom text
               </button>
             </div>
 
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
           </form>
-
-          <button
-            type="button"
-            onClick={() => setStep("preview")}
-            className="mt-5 text-sm text-slate-400 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-600 hover:decoration-slate-400"
-          >
-            Use custom text
-          </button>
         </div>
       </main>
     );
