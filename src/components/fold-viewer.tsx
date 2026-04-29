@@ -5,7 +5,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import { Share2 } from "lucide-react";
+import { ExternalLink, Share2 } from "lucide-react";
 import type { ArticleTree } from "@/lib/types";
 
 type FoldViewerProps = {
@@ -102,9 +102,10 @@ export default function FoldViewer({
               href={articleUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="min-w-0 truncate text-xs text-slate-500 transition hover:text-slate-800"
+              className="group flex min-w-0 items-center gap-1 text-xs text-slate-500 transition hover:text-slate-800"
             >
-              {articleTitle}
+              <span className="min-w-0 truncate">{articleTitle}</span>
+              <ExternalLink className="h-3 w-3 shrink-0 text-slate-400 transition group-hover:text-slate-700" />
             </a>
           ) : articleTitle ? (
             <span className="min-w-0 truncate text-xs text-slate-500">{articleTitle}</span>
@@ -141,6 +142,11 @@ export default function FoldViewer({
             }
           />
         </button>
+        {!isRootOpen && (
+          <p className="-mt-3 mb-4 pr-3 text-right text-[11px] italic text-slate-400">
+            Click to expand ↑
+          </p>
+        )}
 
         {/* Sections */}
         {isRootOpen && (
@@ -205,6 +211,14 @@ export default function FoldViewer({
                 </div>
               );
             })}
+            <div className="mt-6 flex justify-center pb-2">
+              <Link
+                href="/"
+                className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800"
+              >
+                Fold something else
+              </Link>
+            </div>
           </div>
         )}
       </article>
