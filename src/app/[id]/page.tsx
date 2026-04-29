@@ -9,7 +9,7 @@ type PageProps = {
   }>;
 };
 
-const DEFAULT_DESCRIPTION = "Read this hyper efficiently";
+const DEFAULT_DESCRIPTION = "Read this hyper efficiently with AI";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;

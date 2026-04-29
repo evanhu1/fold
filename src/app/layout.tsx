@@ -21,7 +21,7 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "Fold",
-  description: "Read hyper efficiently",
+  description: "Read hyper efficiently with AI",
 };
 
 export default function RootLayout({
