@@ -24,7 +24,7 @@ export class ArticleTreeGenerationError extends Error {
   status = 502;
 }
 
-export const CACHE_VERSION = 2;
+export const CACHE_VERSION = 4;
 
 const SYSTEM_PROMPT =
   "You build hierarchical claim trees for hyper-efficient reading. Use only information present in the source text. Preserve caveats, uncertainty, numbers, and the article's actual argument. The root is a single quotable sentence that completely distills the article's main thesis — it must stand on its own as a takeaway, not a topic label. Each child section is a single claim sentence plus a one-paragraph summary of only that section.";
@@ -191,7 +191,7 @@ async function generateArticleTreeFromLLM(
 
   const google = createGoogleGenerativeAI({ apiKey });
   const { object } = await generateObject({
-    model: google(process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview"),
+    model: google(process.env.GEMINI_MODEL ?? "gemini-3-flash-preview"),
     schema: articleTreeLLMSchema,
     system: SYSTEM_PROMPT,
     prompt: buildArticleTreePrompt(sourceSections),
