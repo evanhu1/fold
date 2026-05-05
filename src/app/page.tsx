@@ -180,7 +180,8 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setStep("preview")}
-                className="inline-flex items-center justify-center px-2 py-2.5 text-sm text-slate-500 transition hover:text-slate-900"
+                disabled={inputAction !== null}
+                className="inline-flex items-center justify-center px-2 py-2.5 text-sm text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-300"
               >
                 Use custom text
               </button>

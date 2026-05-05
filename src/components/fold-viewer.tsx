@@ -169,7 +169,7 @@ export default function FoldViewer({
         </div>
         {!isRootOpen && (
           <p className="-mt-3 mb-4 pr-3 text-right text-[11px] italic text-slate-400">
-            Click to expand ↑
+            ↑ Click to expand
           </p>
         )}
 

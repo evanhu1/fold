@@ -1,19 +1,19 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
-`src/app` holds the App Router pages and API routes, including `/`, `/fold/[id]`, and `api/folds`. Reusable UI lives in `src/components`, and shared logic lives in `src/lib`. Static files go in `public`. SQLite data is stored in `data/` and should be treated as generated local state.
+## Project Structure
+`src/app` holds App Router pages and API routes: `/` (URL input), `/[id]` (fold viewer), `api/folds` (create + fetch), `api/extract` (article extraction). Reusable UI lives in `src/components`, shared logic in `src/lib` (article extraction, summarization, db, types). Static files go in `public`.
 
-## Build, Test, and Development Commands
-Use `npm install` once, then `npm run dev` for local development. `npm run build` creates the production build, `npm run start` serves it, and `npm run lint` runs the project ESLint config. Run lint before opening a PR.
+## Commands
+Use `pnpm install` once, then `pnpm dev` for local development. `pnpm build` creates the production build, `pnpm start` serves it, and `pnpm lint` runs the project ESLint config. Run lint before opening a PR.
 
-## Coding Style & Naming Conventions
-Use strict TypeScript, keep functions small, and follow the existing formatting: 2-space indentation, double quotes, and trailing commas. Use `@/*` imports within `src`. Components should use PascalCase exports, while filenames stay kebab-case, for example `src/components/fold-viewer.tsx`.
+## Coding Style
+Strict TypeScript, small functions, 2-space indentation, double quotes, trailing commas. Use `@/*` imports within `src`. Components use PascalCase exports; filenames stay kebab-case (e.g. `src/components/fold-viewer.tsx`).
 
-## Testing Guidelines
-There is no automated test suite yet. For now, use `npm run lint` and manually verify the main flow: submit text on `/`, confirm a fold is created, and check `/fold/{id}` renders correctly. If you add tests, place them near the feature as `*.test.ts` or `*.test.tsx`.
+## Testing
+No automated test suite yet. Use `pnpm lint` and manually verify the main flow: paste a URL on `/`, confirm a fold is created, and check `/{id}` renders the slider correctly across zoom levels. If you add tests, place them near the feature as `*.test.ts` or `*.test.tsx`.
 
-## Commit & Pull Request Guidelines
-History is minimal, so use short imperative commit messages such as `Add fold copy button`. Keep PRs focused and include a brief summary, manual verification steps, and screenshots for UI changes when helpful.
+## Commits & PRs
+History is minimal — use short imperative commit messages such as `Add fold copy button`. Keep PRs focused and include a brief summary, manual verification steps, and screenshots for UI changes when helpful.
 
-## Security & Configuration Tips
-Keep secrets in `.env.local` and update `.env.example` when config changes. Never commit API keys, local env files, or generated `data/*.db*` files.
+## Configuration
+Postgres connection comes from `DATABASE_URL` (Neon locally and on Vercel via the Neon integration). LLM provider is selected by `LLM_PROVIDER` (`anthropic` | `gemini` | `openai`) with the matching `*_API_KEY` and optional `*_MODEL`. Keep secrets in `.env.local` and update `.env.example` when config changes. Never commit API keys or local env files.
