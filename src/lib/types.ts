@@ -1,16 +1,6 @@
-export type ArticleTreeSection = {
-  id: string;
-  claim: string;
-  summary: string;
-  sourceMarkdown: string;
-  sourceWordCount: number;
-};
+import type { ArticleTree } from "@/lib/article-tree-schema";
 
-export type ArticleTree = {
-  format: "article-tree/v1";
-  rootClaim: string;
-  sections: ArticleTreeSection[];
-};
+export type { ArticleTree, ArticleTreeSection } from "@/lib/article-tree-schema";
 
 export type FoldRecord = {
   id: string;

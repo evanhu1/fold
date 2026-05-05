@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildArticleTree, InputValidationError } from "@/lib/article-tree";
+import {
+  ArticleTreeGenerationError,
+  buildArticleTree,
+  InputValidationError,
+} from "@/lib/article-tree";
 import {
   ArticleExtractionError,
   getArticle,
@@ -77,6 +81,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (error instanceof ArticleExtractionError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status },
+      );
+    }
+
+    if (error instanceof ArticleTreeGenerationError) {
       return NextResponse.json(
         { error: error.message },
         { status: error.status },

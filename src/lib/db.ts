@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
-import { coerceArticleTree } from "@/lib/article-tree";
+import { CACHE_VERSION, coerceArticleTree } from "@/lib/article-tree";
+import { ARTICLE_TREE_FORMAT } from "@/lib/article-tree-schema";
 import { countWords } from "@/lib/text";
 import type { ArticleTree, FoldRecord } from "@/lib/types";
 
@@ -170,7 +171,8 @@ function buildLegacyArticleTreeFromLevels(
     "This article develops a single main idea.";
 
   return {
-    format: "article-tree/v1",
+    format: ARTICLE_TREE_FORMAT,
+    cacheVersion: 0,
     rootClaim,
     sections: [
       {
@@ -238,7 +240,8 @@ function buildLegacyArticleTreeFromMap(value: unknown): ArticleTree | null {
   }
 
   return {
-    format: "article-tree/v1",
+    format: ARTICLE_TREE_FORMAT,
+    cacheVersion: 0,
     rootClaim,
     sections,
   };
@@ -328,7 +331,7 @@ export async function getLatestFoldByArticleUrl(
   }
 
   const articleTree = parseStoredArticleTree(row.fold_json, row.original_text, false);
-  if (!articleTree) {
+  if (!articleTree || articleTree.cacheVersion !== CACHE_VERSION) {
     return null;
   }
 
