@@ -124,7 +124,7 @@ export default function Home() {
     return (
       <main className="relative flex min-h-screen flex-col items-center justify-center px-6">
         <div className="w-full max-w-lg text-center">
-          <h1 className="font-serif text-5xl font-bold tracking-tight text-slate-900">
+          <h1 className="font-display text-5xl font-bold tracking-tight text-slate-900">
             Fold
           </h1>
           <p className="mt-2 text-sm text-slate-500">
@@ -231,7 +231,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-6 py-8">
       <header className="flex items-center justify-between gap-4">
-        <h1 className="font-serif text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
           Fold
         </h1>
         <button

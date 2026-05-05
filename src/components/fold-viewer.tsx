@@ -5,7 +5,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import { ExternalLink, Share2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import type { ArticleTree } from "@/lib/types";
 
 type FoldViewerProps = {
@@ -39,10 +39,21 @@ export default function FoldViewer({
   articleTree,
 }: FoldViewerProps) {
   const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isRootOpen, setIsRootOpen] = useState(false);
   const [sectionStages, setSectionStages] = useState<Record<string, SectionStage>>(
     {},
   );
+
+  async function copyText(id: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1500);
+    } catch {
+      // clipboard unavailable, do nothing
+    }
+  }
 
   function toggleRoot() {
     setIsRootOpen((current) => {
@@ -92,7 +103,7 @@ export default function FoldViewer({
         <div className="flex min-w-0 items-baseline gap-2">
           <Link
             href="/"
-            className="shrink-0 font-serif text-xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
+            className="shrink-0 font-display text-xl font-bold tracking-tight text-slate-900 transition hover:text-slate-600"
           >
             Fold
           </Link>
@@ -102,13 +113,13 @@ export default function FoldViewer({
               href={articleUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex min-w-0 items-center gap-1 text-xs text-slate-500 transition hover:text-slate-800"
+              className="group flex min-w-0 items-center gap-1 text-sm text-slate-500 transition hover:text-slate-800"
             >
               <span className="min-w-0 truncate">{articleTitle}</span>
-              <ExternalLink className="h-3 w-3 shrink-0 text-slate-400 transition group-hover:text-slate-700" />
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400 transition group-hover:text-slate-700" />
             </a>
           ) : articleTitle ? (
-            <span className="min-w-0 truncate text-xs text-slate-500">{articleTitle}</span>
+            <span className="min-w-0 truncate text-sm text-slate-500">{articleTitle}</span>
           ) : null}
         </div>
 
@@ -126,22 +137,36 @@ export default function FoldViewer({
 
       <article className="mt-0">
         {/* Root claim */}
-        <button
-          type="button"
-          onClick={toggleRoot}
-          className="group -mx-2 my-4 md:my-5 flex w-[calc(100%+1rem)] cursor-pointer items-start justify-between gap-4 rounded-xl p-2 pr-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
-        >
-          <p className="select-text text-base font-medium leading-7 text-slate-900 transition group-hover:text-slate-700">
-            {articleTree.rootClaim}
-          </p>
-          <ChevronDown
-            className={
-              isRootOpen
-                ? "mt-1.5 rotate-180 text-slate-500"
-                : "mt-1.5 text-slate-400"
-            }
-          />
-        </button>
+        <div className="relative -mx-2 my-4 md:my-5">
+          <button
+            type="button"
+            onClick={toggleRoot}
+            className="group flex w-full cursor-pointer items-start justify-between gap-4 rounded-xl p-2 pr-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
+          >
+            <p className="select-text font-serif text-xl font-normal leading-8 text-slate-900 transition group-hover:text-slate-700">
+              {articleTree.rootClaim}
+            </p>
+            <ChevronDown
+              className={
+                isRootOpen
+                  ? "mt-1.5 rotate-180 text-slate-500"
+                  : "mt-1.5 text-slate-400"
+              }
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => copyText("root", articleTree.rootClaim)}
+            aria-label={copiedId === "root" ? "Copied!" : "Copy claim"}
+            className="absolute bottom-2 right-3 cursor-pointer rounded-md p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+          >
+            {copiedId === "root" ? (
+              <Check className="h-3.5 w-3.5 text-slate-700" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
         {!isRootOpen && (
           <p className="-mt-3 mb-4 pr-3 text-right text-[11px] italic text-slate-400">
             Click to expand ↑
@@ -157,25 +182,39 @@ export default function FoldViewer({
               return (
                 <div key={section.id}>
                   {/* Claim row */}
-                  <button
-                    type="button"
-                    onClick={() => toggleClaim(section.id)}
-                    className="group flex w-full cursor-pointer items-start gap-2 rounded-xl py-3 pr-1 md:py-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
-                  >
-                    <span className="w-4 shrink-0 pt-[3px] text-right text-[11px] tabular-nums text-slate-400 transition group-hover:text-slate-600">
-                      {index + 1}
-                    </span>
-                    <p className="select-text flex-1 text-sm leading-6 text-slate-800 transition group-hover:text-slate-900">
-                      {section.claim}
-                    </p>
-                    <ChevronDown
-                      className={
-                        stage >= 1
-                          ? "mt-1 rotate-180 text-slate-400"
-                          : "mt-1 text-slate-400"
-                      }
-                    />
-                  </button>
+                  <div className="group/row relative">
+                    <button
+                      type="button"
+                      onClick={() => toggleClaim(section.id)}
+                      className="group flex w-full cursor-pointer items-start gap-2 rounded-xl py-3 pr-1 md:py-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
+                    >
+                      <span className="w-4 shrink-0 pt-[3px] text-right text-[11px] tabular-nums text-slate-400 transition group-hover:text-slate-600">
+                        {index + 1}
+                      </span>
+                      <p className="select-text flex-1 text-base leading-7 text-slate-800 transition group-hover:text-slate-900">
+                        {section.claim}
+                      </p>
+                      <ChevronDown
+                        className={
+                          stage >= 1
+                            ? "mt-1 rotate-180 text-slate-400"
+                            : "mt-1 text-slate-400"
+                        }
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyText(section.id, section.claim)}
+                      aria-label={copiedId === section.id ? "Copied!" : "Copy claim"}
+                      className="absolute bottom-1 right-1 cursor-pointer rounded-md p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 md:opacity-0 md:group-hover/row:opacity-100 md:focus:opacity-100"
+                    >
+                      {copiedId === section.id ? (
+                        <Check className="h-3.5 w-3.5 text-slate-700" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </div>
 
                   {/* Summary + source */}
                   {stage >= 1 && (
@@ -185,7 +224,7 @@ export default function FoldViewer({
                         onClick={() => toggleSummary(section.id)}
                         className="group/sum flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl pb-3 pr-1 md:pb-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
                       >
-                        <p className="select-text text-sm leading-6 text-slate-600 transition group-hover/sum:text-slate-800">
+                        <p className="select-text text-base leading-7 text-slate-600 transition group-hover/sum:text-slate-800">
                           {section.summary}
                         </p>
                         <ChevronDown
@@ -199,7 +238,7 @@ export default function FoldViewer({
 
                       {stage === 2 && (
                         <div className="ml-5 border-l-2 border-slate-200 pl-4 pb-4 md:pb-5">
-                          <div className="markdown-output text-sm leading-6 text-slate-600">
+                          <div className="markdown-output text-base leading-7 text-slate-700">
                             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                               {section.sourceMarkdown}
                             </ReactMarkdown>
