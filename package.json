@@ -13,6 +13,7 @@
     "@ai-sdk/google": "^3.0.67",
     "@mozilla/readability": "^0.6.0",
     "@neondatabase/serverless": "^1.0.1",
+    "@radix-ui/react-collapsible": "^1.1.12",
     "@vercel/analytics": "^2.0.1",
     "ai": "^6.0.175",
     "linkedom": "^0.18.12",

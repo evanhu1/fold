@@ -6,7 +6,11 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
+import * as Collapsible from "@radix-ui/react-collapsible";
 import type { ArticleTree } from "@/lib/types";
+
+const collapsibleContentClass =
+  "overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up";
 
 type FoldViewerProps = {
   articleUrl?: string | null;
@@ -55,27 +59,19 @@ export default function FoldViewer({
     }
   }
 
-  function toggleRoot() {
-    setIsRootOpen((current) => {
-      if (current) {
-        setSectionStages({});
-      }
-      return !current;
-    });
+  function handleRootChange(open: boolean) {
+    setIsRootOpen(open);
+    if (!open) {
+      setSectionStages({});
+    }
   }
 
-  function toggleClaim(sectionId: string) {
-    setSectionStages((current) => {
-      const stage = current[sectionId] ?? 0;
-      return { ...current, [sectionId]: stage === 0 ? 1 : 0 };
-    });
+  function handleClaimChange(sectionId: string, open: boolean) {
+    setSectionStages((current) => ({ ...current, [sectionId]: open ? 1 : 0 }));
   }
 
-  function toggleSummary(sectionId: string) {
-    setSectionStages((current) => {
-      const stage = current[sectionId] ?? 1;
-      return { ...current, [sectionId]: stage === 2 ? 1 : 2 };
-    });
+  function handleSummaryChange(sectionId: string, open: boolean) {
+    setSectionStages((current) => ({ ...current, [sectionId]: open ? 2 : 1 }));
   }
 
   async function copyShareLink() {
@@ -136,130 +132,143 @@ export default function FoldViewer({
       </header>
 
       <article className="mt-0">
-        {/* Root claim */}
-        <div className="relative -mx-2 my-4 md:my-5">
-          <button
-            type="button"
-            onClick={toggleRoot}
-            className="group flex w-full cursor-pointer items-start justify-between gap-4 rounded-xl p-2 pr-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
-          >
-            <p className="select-text font-serif text-xl font-normal leading-8 text-slate-900 transition group-hover:text-slate-700">
-              {articleTree.rootClaim}
+        <Collapsible.Root open={isRootOpen} onOpenChange={handleRootChange}>
+          {/* Root claim */}
+          <div className="relative -mx-2 my-4 md:my-5">
+            <Collapsible.Trigger asChild>
+              <button
+                type="button"
+                className="group flex w-full cursor-pointer items-start justify-between gap-4 rounded-xl p-2 pr-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
+              >
+                <p className="select-text font-serif text-xl font-normal leading-8 text-slate-900 transition group-hover:text-slate-700">
+                  {articleTree.rootClaim}
+                </p>
+                <ChevronDown
+                  className={
+                    isRootOpen
+                      ? "mt-1.5 rotate-180 text-slate-500"
+                      : "mt-1.5 text-slate-400"
+                  }
+                />
+              </button>
+            </Collapsible.Trigger>
+            <button
+              type="button"
+              onClick={() => copyText("root", articleTree.rootClaim)}
+              aria-label={copiedId === "root" ? "Copied!" : "Copy claim"}
+              className="absolute bottom-2 right-3 cursor-pointer rounded-md p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+            >
+              {copiedId === "root" ? (
+                <Check className="h-3.5 w-3.5 text-slate-700" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+          {!isRootOpen && (
+            <p className="-mt-3 mb-4 pr-3 text-right text-[11px] italic text-slate-400">
+              ↑ Click to expand
             </p>
-            <ChevronDown
-              className={
-                isRootOpen
-                  ? "mt-1.5 rotate-180 text-slate-500"
-                  : "mt-1.5 text-slate-400"
-              }
-            />
-          </button>
-          <button
-            type="button"
-            onClick={() => copyText("root", articleTree.rootClaim)}
-            aria-label={copiedId === "root" ? "Copied!" : "Copy claim"}
-            className="absolute bottom-2 right-3 cursor-pointer rounded-md p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
-          >
-            {copiedId === "root" ? (
-              <Check className="h-3.5 w-3.5 text-slate-700" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-          </button>
-        </div>
-        {!isRootOpen && (
-          <p className="-mt-3 mb-4 pr-3 text-right text-[11px] italic text-slate-400">
-            ↑ Click to expand
-          </p>
-        )}
+          )}
 
-        {/* Sections */}
-        {isRootOpen && (
-          <div>
-            {articleTree.sections.map((section, index) => {
-              const stage = sectionStages[section.id] ?? 0;
+          <Collapsible.Content className={collapsibleContentClass}>
+            <div>
+              {articleTree.sections.map((section, index) => {
+                const stage = sectionStages[section.id] ?? 0;
 
-              return (
-                <div key={section.id}>
-                  {/* Claim row */}
-                  <div className="group/row relative">
-                    <button
-                      type="button"
-                      onClick={() => toggleClaim(section.id)}
-                      className="group flex w-full cursor-pointer items-start gap-2 rounded-xl py-3 pr-1 md:py-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
-                    >
-                      <span className="w-4 shrink-0 pt-[3px] text-right text-[11px] tabular-nums text-slate-400 transition group-hover:text-slate-600">
-                        {index + 1}
-                      </span>
-                      <p className="select-text flex-1 text-base leading-7 text-slate-800 transition group-hover:text-slate-900">
-                        {section.claim}
-                      </p>
-                      <ChevronDown
-                        className={
-                          stage >= 1
-                            ? "mt-1 rotate-180 text-slate-400"
-                            : "mt-1 text-slate-400"
-                        }
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => copyText(section.id, section.claim)}
-                      aria-label={copiedId === section.id ? "Copied!" : "Copy claim"}
-                      className="absolute bottom-1 right-1 cursor-pointer rounded-md p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 md:opacity-0 md:group-hover/row:opacity-100 md:focus:opacity-100"
-                    >
-                      {copiedId === section.id ? (
-                        <Check className="h-3.5 w-3.5 text-slate-700" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Summary + source */}
-                  {stage >= 1 && (
-                    <div className="ml-4 border-l-2 border-slate-200 pl-3">
+                return (
+                  <Collapsible.Root
+                    key={section.id}
+                    open={stage >= 1}
+                    onOpenChange={(open) => handleClaimChange(section.id, open)}
+                  >
+                    {/* Claim row */}
+                    <div className="group/row relative">
+                      <Collapsible.Trigger asChild>
+                        <button
+                          type="button"
+                          className="group flex w-full cursor-pointer items-start gap-2 rounded-xl py-3 pr-1 md:py-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
+                        >
+                          <span className="w-4 shrink-0 pt-[3px] text-right text-[11px] tabular-nums text-slate-400 transition group-hover:text-slate-600">
+                            {index + 1}
+                          </span>
+                          <p className="select-text flex-1 text-base leading-7 text-slate-800 transition group-hover:text-slate-900">
+                            {section.claim}
+                          </p>
+                          <ChevronDown
+                            className={
+                              stage >= 1
+                                ? "mt-1 rotate-180 text-slate-400"
+                                : "mt-1 text-slate-400"
+                            }
+                          />
+                        </button>
+                      </Collapsible.Trigger>
                       <button
                         type="button"
-                        onClick={() => toggleSummary(section.id)}
-                        className="group/sum flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl pb-3 pr-1 md:pb-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
+                        onClick={() => copyText(section.id, section.claim)}
+                        aria-label={copiedId === section.id ? "Copied!" : "Copy claim"}
+                        className="absolute bottom-1 right-1 cursor-pointer rounded-md p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 md:opacity-0 md:group-hover/row:opacity-100 md:focus:opacity-100"
                       >
-                        <p className="select-text text-base leading-7 text-slate-600 transition group-hover/sum:text-slate-800">
-                          {section.summary}
-                        </p>
-                        <ChevronDown
-                          className={
-                            stage === 2
-                              ? "mt-1 shrink-0 rotate-180 text-slate-400"
-                              : "mt-1 shrink-0 text-slate-400"
-                          }
-                        />
+                        {copiedId === section.id ? (
+                          <Check className="h-3.5 w-3.5 text-slate-700" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
                       </button>
-
-                      {stage === 2 && (
-                        <div className="ml-5 border-l-2 border-slate-200 pl-4 pb-4 md:pb-5">
-                          <div className="markdown-output text-base leading-7 text-slate-700">
-                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                              {section.sourceMarkdown}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-            <div className="mt-6 flex justify-center pb-2">
-              <Link
-                href="/"
-                className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800"
-              >
-                Fold something else
-              </Link>
+
+                    {/* Summary + source */}
+                    <Collapsible.Content className={collapsibleContentClass}>
+                      <Collapsible.Root
+                        open={stage === 2}
+                        onOpenChange={(open) => handleSummaryChange(section.id, open)}
+                      >
+                        <div className="ml-4 border-l-2 border-slate-200 pl-3">
+                          <Collapsible.Trigger asChild>
+                            <button
+                              type="button"
+                              className="group/sum flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl pb-3 pr-1 md:pb-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-50"
+                            >
+                              <p className="select-text text-base leading-7 text-slate-600 transition group-hover/sum:text-slate-800">
+                                {section.summary}
+                              </p>
+                              <ChevronDown
+                                className={
+                                  stage === 2
+                                    ? "mt-1 shrink-0 rotate-180 text-slate-400"
+                                    : "mt-1 shrink-0 text-slate-400"
+                                }
+                              />
+                            </button>
+                          </Collapsible.Trigger>
+
+                          <Collapsible.Content className={collapsibleContentClass}>
+                            <div className="ml-5 border-l-2 border-slate-200 pl-4 pb-4 md:pb-5">
+                              <div className="markdown-output text-base leading-7 text-slate-700">
+                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                  {section.sourceMarkdown}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          </Collapsible.Content>
+                        </div>
+                      </Collapsible.Root>
+                    </Collapsible.Content>
+                  </Collapsible.Root>
+                );
+              })}
+              <div className="mt-6 flex justify-center pb-2">
+                <Link
+                  href="/"
+                  className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800"
+                >
+                  Fold something else
+                </Link>
+              </div>
             </div>
-          </div>
-        )}
+          </Collapsible.Content>
+        </Collapsible.Root>
       </article>
     </main>
   );
